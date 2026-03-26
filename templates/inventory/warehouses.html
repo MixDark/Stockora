@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Almacenes{% endblock %}
+{% block page_title %}Almacenes{% endblock %}
+
+{% block header_action %}
+<button @click="$dispatch('open-new-warehouse')"
+  class="sm:w-auto flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+  <i class="fa-solid fa-plus"></i> Nuevo
+</button>
+{% endblock %}
+
+{% block content %}
+<div x-data="{
+  showNew: false,
+  showEdit: false,
+  showDelete: false,
+  editPk: null,
+  editName: '',
+  editAddress: '',
+  editPhone: '',
+  editManagerId: '',
+  deletePk: null,
+  deleteName: '',
+  openEdit(pk, name, address, phone, managerId) {
+    this.editPk = pk; this.editName = name; this.editAddress = address; this.editPhone = phone;
+    this.editManagerId = managerId;
+    this.showEdit = true;
+  }
+}" @open-new-warehouse.window="showNew = true">
+
+<!-- Modal nuevo almacén -->
+<div x-show="showNew" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showNew = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-white flex-1 text-center">Nuevo almacén</h3>
+      <button @click="showNew = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form method="POST" action="{% url 'inventory:warehouse_create' %}" class="space-y-4">
+      {% csrf_token %}
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre *</label>
+          <input type="text" name="name" required
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Código *</label>
+          <input type="text" name="code" required
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white uppercase">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Dirección</label>
+          <input type="text" name="address"
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Teléfono</label>
+          <input type="text" name="phone"
+            class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Responsable</label>
+          <select name="manager" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+            <option value="">Sin responsable</option>
+            {% for u in users %}
+            <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button type="button" @click="showNew = false"
+          class="btn-cancel px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar almacén -->
+<div x-show="showEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showEdit = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 z-10">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-white flex-1 text-center">Editar almacén</h3>
+      <button @click="showEdit = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form method="POST" :action="`/inventario/almacenes/${editPk}/editar/`" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Nombre *</label>
+        <input type="text" name="name" :value="editName" required
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Dirección</label>
+        <input type="text" name="address" :value="editAddress"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Teléfono</label>
+        <input type="text" name="phone" :value="editPhone"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Responsable</label>
+        <select name="manager" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+          <option value="">Sin responsable</option>
+          {% for u in users %}
+          <option value="{{ u.pk }}" :selected="editManagerId == '{{ u.pk }}'">{{ u.get_full_name|default:u.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button type="button" @click="showEdit = false"
+          class="btn-cancel px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal confirmar eliminación -->
+<div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showDelete = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <div class="flex justify-center mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-trash text-red-600 dark:text-red-400 text-lg"></i>
+      </div>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Eliminar almacén</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      ¿Estás seguro de eliminar
+      <span class="font-semibold text-gray-800 dark:text-white" x-text="deleteName"></span>?
+      Esta acción no se puede deshacer.
+    </p>
+    <form method="POST" :action="`/inventario/almacenes/${deletePk}/eliminar/`">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="button" @click="showDelete = false"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+        </button>
+        <button type="submit"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-trash mr-1"></i>Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+  {% if warehouses %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+          <th class="px-5 py-3 font-medium">Almacén</th>
+          <th class="px-5 py-3 font-medium hidden md:table-cell">Dirección</th>
+          <th class="px-5 py-3 font-medium hidden lg:table-cell">Teléfono</th>
+          <th class="px-5 py-3 font-medium hidden lg:table-cell">Responsable</th>
+          <th class="px-5 py-3 font-medium">Estado</th>
+          <th class="px-5 py-3 font-medium">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+        {% for w in warehouses %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-warehouse text-indigo-600 dark:text-indigo-400 text-sm"></i>
+              </div>
+              <div>
+                <span class="font-medium text-gray-800 dark:text-white block">{{ w.name }}</span>
+                <span class="text-xs text-indigo-600 dark:text-indigo-400 font-mono">{{ w.code }}</span>
+              </div>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400 hidden md:table-cell">{{ w.address|default:"—" }}</td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400 hidden lg:table-cell">{{ w.phone|default:"—" }}</td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+            {% if w.manager %}{{ w.manager.get_full_name|default:w.manager.username }}{% else %}—{% endif %}
+          </td>
+          <td class="px-5 py-3">
+            {% if w.is_active %}
+            <span class="text-xs font-medium text-black dark:text-white">Activo</span>
+            {% else %}
+            <span class="text-xs font-medium text-black dark:text-white">Inactivo</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-1">
+              <a href="{% url 'inventory:warehouse_detail' w.pk %}"
+                class="text-indigo-500 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded transition-colors" title="Ver">
+                <i class="fa-solid fa-eye text-sm"></i>
+              </a>
+              <button @click="openEdit({{ w.pk }}, '{{ w.name|escapejs }}', '{{ w.address|default:''|escapejs }}', '{{ w.phone|default:''|escapejs }}', '{{ w.manager_id|default:'' }}')"
+                class="text-amber-500 hover:text-amber-700 p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/40 rounded transition-colors" title="Editar">
+                <i class="fa-solid fa-pen text-sm"></i>
+              </button>
+              <button @click="deletePk = {{ w.pk }}; deleteName = '{{ w.name|escapejs }}'; showDelete = true"
+                class="text-indigo-500 hover:text-indigo-700 p-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 rounded transition-colors" title="Eliminar">
+                <i class="fa-solid fa-trash text-sm"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-gray-400">
+    <i class="fa-solid fa-warehouse text-5xl mb-4"></i>
+    <p class="text-lg font-medium text-gray-600 dark:text-gray-300 mb-1">Sin almacenes registrados</p>
+    <p class="text-sm">Agrega almacenes con el botón "+ Nuevo".</p>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

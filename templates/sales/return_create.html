@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Nueva devolución — Venta {{ sale.invoice_number }}{% endblock %}
+{% block page_title %}Nueva devolución{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-5">
+
+  <!-- Datos de la venta original -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+    <h3 class="font-semibold text-gray-800 dark:text-white mb-3">Venta original</h3>
+    <div class="flex flex-wrap gap-6 text-sm">
+      <div><span class="text-gray-500 dark:text-gray-400 block text-xs">Factura</span>
+           <span class="font-mono font-medium text-gray-800 dark:text-white">{{ sale.invoice_number }}</span></div>
+      <div><span class="text-gray-500 dark:text-gray-400 block text-xs">Cliente</span>
+           <span class="text-gray-800 dark:text-white">{{ sale.customer.name|default:"Consumidor final" }}</span></div>
+      <div><span class="text-gray-500 dark:text-gray-400 block text-xs">Fecha</span>
+           <span class="text-gray-600 dark:text-gray-300">{{ sale.created_at|date:"d/m/Y H:i" }}</span></div>
+      <div><span class="text-gray-500 dark:text-gray-400 block text-xs">Total</span>
+           <span class="font-bold text-indigo-600 dark:text-indigo-400">${{ sale.total|peso }}</span></div>
+    </div>
+  </div>
+
+  <!-- Formulario de devolución -->
+  <form method="post" action="{% url 'sales:return_create' sale.pk %}">
+    {% csrf_token %}
+
+    <!-- Formulario unificado -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Productos a devolver</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Ingresa 0 en cantidad para no incluir ese producto.</p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <th class="px-5 py-3 text-left">Producto</th>
+              <th class="px-5 py-3 text-right">Comprado</th>
+              <th class="px-5 py-3 text-right">Precio unit.</th>
+              <th class="px-5 py-3 text-center w-32">Cant. a devolver</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for item in sale_items %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+              <td class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">{{ item.quantity }}</td>
+              <td class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">${{ item.unit_price|peso }}</td>
+              <td class="px-5 py-3 text-center">
+                <input type="number" name="qty_{{ item.pk }}" value="0" min="0" max="{{ item.quantity }}"
+                       class="w-20 text-center border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="p-5 border-t border-gray-100 dark:border-gray-700 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Motivo de devolución <span class="text-red-500">*</span></label>
+          <textarea name="reason" rows="3" required
+                    placeholder="Describe el motivo de la devolucion"
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        </div>
+        <div class="flex items-center gap-3">
+          <input type="checkbox" name="restock" id="restock" checked
+                 class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+          <label for="restock" class="text-sm text-gray-700 dark:text-gray-300">
+            Reingresar al stock del almacén <span class="text-xs text-gray-400 dark:text-gray-500">({{ sale.warehouse.name }})</span>
+          </label>
+        </div>
+        <div class="flex gap-3 justify-end pt-2 border-t border-gray-100 dark:border-gray-700">
+          <a href="{% url 'sales:detail' sale.pk %}" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm text-white font-medium transition-colors">
+            <i class="fa-solid fa-times mr-1"></i> Cancelar
+          </a>
+          <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+            <i class="fa-solid fa-rotate-left mr-1"></i> Registrar
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

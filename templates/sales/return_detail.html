@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Devolución DEV-{{ ret.pk|stringformat:"05d" }}{% endblock %}
+{% block page_title %}Devolución DEV-{{ ret.pk|stringformat:"05d" }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  <!-- Info lateral -->
+  <div class="space-y-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Detalle</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Venta original</span>
+          <a href="{% url 'sales:detail' ret.sale.pk %}" class="text-indigo-600 hover:underline font-mono">{{ ret.sale.invoice_number }}</a>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Fecha</span>
+          <span class="text-gray-600 dark:text-gray-300">{{ ret.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Procesada por</span>
+          <span class="text-gray-600 dark:text-gray-300 text-xs">{{ ret.processed_by.get_full_name|default:ret.processed_by.username|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-500 dark:text-gray-400">Reingresó stock</span>
+          {% if ret.restock %}
+          <span class="inline-flex items-center gap-1 text-xs text-black dark:text-white font-medium"><i class="fa-solid fa-check-circle text-green-500"></i> Sí</span>
+          {% else %}
+          <span class="inline-flex items-center gap-1 text-xs text-gray-400"><i class="fa-solid fa-times-circle"></i> No</span>
+          {% endif %}
+        </div>
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between font-bold text-gray-800 dark:text-white">
+          <span>Total devuelto</span>
+          <span class="text-red-500">${{ ret.total|peso }}</span>
+        </div>
+      </div>
+    </div>
+
+    {% if ret.reason %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 uppercase">Motivo</p>
+      <p class="text-sm text-gray-700 dark:text-gray-300">{{ ret.reason }}</p>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'sales:returns' %}" class="block text-center text-sm text-indigo-600 hover:underline">
+      <i class="fa-solid fa-arrow-left mr-1"></i> Volver al listado
+    </a>
+  </div>
+
+  <!-- Productos devueltos -->
+  <div class="xl:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Productos devueltos</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <th class="px-5 py-3 text-left">Producto</th>
+              <th class="px-5 py-3 text-right">Cantidad</th>
+              <th class="px-5 py-3 text-right">Precio unit.</th>
+              <th class="px-5 py-3 text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for item in items %}
+            {% with sale_item=ret.sale.items.all %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+              <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{{ item.quantity }}</td>
+              <td class="px-5 py-3 text-right text-gray-500 dark:text-gray-400">
+                {% for si in ret.sale.items.all %}{% if si.product_id == item.product_id %}${{ si.unit_price|peso }}{% endif %}{% endfor %}
+              </td>
+              <td class="px-5 py-3 text-right font-medium text-red-500">
+                {% for si in ret.sale.items.all %}{% if si.product_id == item.product_id %}-${{ si.unit_price|peso }}{% endif %}{% endfor %}
+              </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-gray-200 dark:border-gray-600">
+              <td colspan="3" class="px-5 py-3 text-right font-bold text-gray-700 dark:text-gray-300">Total devuelto</td>
+              <td class="px-5 py-3 text-right font-bold text-red-500">-${{ ret.total|peso }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

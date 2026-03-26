@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}{{ warehouse.name }}{% endblock %}
+{% block page_title %}Detalle del almacén{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Botón volver -->
+  <div>
+    <a href="{% url 'inventory:warehouses' %}"
+      class="inline-flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+      <i class="fa-solid fa-arrow-left"></i> Volver a almacenes
+    </a>
+  </div>
+
+  <!-- Tarjeta de información -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+    <div class="flex items-center gap-4 mb-6">
+      <div class="w-14 h-14 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-warehouse text-indigo-600 dark:text-indigo-400 text-xl"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-100">{{ warehouse.name }}</h2>
+        <span class="text-sm font-mono text-indigo-600 dark:text-indigo-400">{{ warehouse.code }}</span>
+        {% if not warehouse.is_active %}
+        <span class="inline-block ml-2 text-xs font-medium bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Inactivo</span>
+        {% else %}
+        <span class="inline-block ml-2 text-xs font-medium bg-green-100 text-green-600 px-2 py-0.5 rounded-full">Activo</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+      {% if warehouse.address %}
+      <div class="flex items-start gap-3 text-gray-600 dark:text-gray-300">
+        <i class="fa-solid fa-location-dot w-4 text-gray-400 mt-0.5"></i>
+        <span>{{ warehouse.address }}</span>
+      </div>
+      {% endif %}
+      {% if warehouse.phone %}
+      <div class="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+        <i class="fa-solid fa-phone w-4 text-gray-400"></i>
+        <span>{{ warehouse.phone }}</span>
+      </div>
+      {% endif %}
+      {% if warehouse.manager %}
+      <div class="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+        <i class="fa-solid fa-user w-4 text-gray-400"></i>
+        <span>{{ warehouse.manager.get_full_name|default:warehouse.manager.username }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Inventario -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="text-base font-semibold text-gray-800 dark:text-gray-100">
+        <i class="fa-solid fa-boxes-stacked text-indigo-500 mr-2"></i>Inventario actual
+      </h3>
+    </div>
+
+    {% if stock_items %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Producto</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">SKU</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Ubicación</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Disponible</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Reservado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for item in stock_items %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <td class="px-6 py-3 font-medium text-gray-800 dark:text-gray-200">{{ item.product.name }}</td>
+            <td class="px-6 py-3 font-mono text-xs text-indigo-600 dark:text-indigo-400">{{ item.product.sku }}</td>
+            <td class="px-6 py-3 text-gray-500 dark:text-gray-400 hidden md:table-cell">
+              {% if item.location %}{{ item.location.code }}{% else %}—{% endif %}
+            </td>
+            <td class="px-6 py-3 text-right font-medium
+              {% if item.is_low_stock %}text-red-600{% else %}text-gray-800 dark:text-gray-200{% endif %}">
+              {{ item.available_quantity }}
+            </td>
+            <td class="px-6 py-3 text-right text-gray-600 dark:text-gray-300">{{ item.quantity }}</td>
+            <td class="px-6 py-3 text-right text-gray-400 hidden lg:table-cell">{{ item.reserved_quantity }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-6 py-12 text-center text-gray-400 dark:text-gray-500 text-sm">
+      <i class="fa-solid fa-boxes-stacked text-3xl mb-3 block opacity-30"></i>
+      Este almacén no tiene productos en inventario.
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

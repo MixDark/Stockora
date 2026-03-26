@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}Punto de venta{% endblock %}
+{% block page_title %}Punto de venta (POS){% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6 h-full" x-data="posApp()">
+
+  <!-- Panel izquierdo: catálogo de productos -->
+  <div class="xl:col-span-3 flex flex-col gap-4">
+
+    <!-- Búsqueda de producto -->
+    <div class="relative">
+      <span class="absolute inset-y-0 left-3 flex items-center text-gray-400"><i class="fa-solid fa-search text-sm"></i></span>
+      <input type="text" x-model="search" placeholder="Buscar producto por nombre o SKU"
+             class="w-full pl-9 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+    </div>
+
+    <!-- Grid de productos -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 overflow-y-auto" style="max-height:calc(100vh - 280px);">
+      {% for p in products %}
+      <button type="button"
+              @click="addItem({{ p.pk }}, '{{ p.name|escapejs }}', {{ p.sale_price }}, '{{ p.sku }}')"
+              x-show="search === '' || '{{ p.name|lower }}'.includes(search.toLowerCase()) || '{{ p.sku|lower }}'.includes(search.toLowerCase())"
+              class="bg-white border border-gray-200 rounded-xl p-3 text-left hover:border-indigo-400 hover:shadow-md transition-all text-sm group">
+        <div class="w-full aspect-square bg-indigo-50 rounded-lg flex items-center justify-center mb-2 group-hover:bg-indigo-100 transition-colors">
+          {% if p.image %}
+          <img src="{{ p.image.url }}" alt="{{ p.name }}" class="w-full h-full object-cover rounded-lg">
+          {% else %}
+          <i class="fa-solid fa-box text-indigo-400 text-2xl"></i>
+          {% endif %}
+        </div>
+        <p class="font-medium text-gray-800 text-xs leading-tight truncate">{{ p.name }}</p>
+        <p class="text-xs text-gray-400 font-mono">{{ p.sku }}</p>
+        <p class="text-sm font-bold text-indigo-600 mt-1">${{ p.sale_price|peso }}</p>
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Panel derecho: carrito de venta -->
+  <div class="xl:col-span-2 flex flex-col gap-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col" style="max-height:calc(100vh - 120px);">
+
+      <!-- Cabecera del carrito -->
+      <div class="p-4 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-800">Carrito de venta</h3>
+      </div>
+
+      <!-- Items del carrito -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <template x-if="cart.length === 0">
+          <div class="flex flex-col items-center justify-center py-10 text-gray-400 text-sm">
+            <i class="fa-solid fa-cart-shopping text-3xl mb-3"></i>
+            <p>Haz clic en un producto para agregarlo</p>
+          </div>
+        </template>
+        <template x-for="(item, idx) in cart" :key="item.id">
+          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate" x-text="item.name"></p>
+              <p class="text-xs text-gray-400 font-mono" x-text="item.sku"></p>
+              <p class="text-sm font-bold text-indigo-600" x-text="'$' + (item.price * item.qty).toLocaleString()"></p>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button @click="decQty(idx)" class="w-7 h-7 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold">−</button>
+              <span class="w-8 text-center text-sm font-medium text-gray-800 dark:text-white" x-text="item.qty"></span>
+              <button @click="incQty(idx)" class="w-7 h-7 bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors text-sm font-bold">+</button>
+              <button @click="removeItem(idx)" class="w-7 h-7 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Footer: totales y pago -->
+      <div class="border-t border-gray-100 p-4 space-y-3">
+        <div class="flex justify-between text-sm">
+          <span class="text-gray-800">Subtotal</span>
+          <span class="font-medium text-gray-800" x-text="'$' + total().toLocaleString()"></span>
+        </div>
+        <div class="flex justify-between font-bold text-base border-t border-gray-100 pt-2">
+          <span class="text-gray-800">Total</span>
+          <span class="text-indigo-600" x-text="'$' + total().toLocaleString()"></span>
+        </div>
+
+        <!-- Configuración de la venta -->
+        <form method="POST" action="{% url 'sales:pos' %}" id="posForm" @submit.prevent="submitSale">
+          {% csrf_token %}
+          <input type="hidden" name="cart_data" x-model="JSON.stringify(cart)">
+          <div class="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-800 mb-1">Cliente</label>
+              <select name="customer" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                <option value="">Consumidor final</option>
+                {% for c in customers %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-800 mb-1">Almacén</label>
+              <select name="warehouse" required class="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-800 mb-1">Método de pago</label>
+            <select name="payment_method" class="w-full border border-gray-300 rounded-lg px-2 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none bg-white mb-3">
+              {% for value, label in payment_methods %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="flex justify-center">
+            <button type="submit" :disabled="cart.length === 0"
+                    class="px-10 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white py-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+              <i class="fa-solid fa-cash-register"></i>
+              Cobrar
+            </button>
+          </div>
+          <button type="button" @click="clearCart()" class="w-full mt-2 text-gray-800 hover:text-red-600 text-xs py-1 transition-colors">
+            Limpiar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% block extra_js %}
+<script>
+function posApp() {
+  return {
+    cart: [],
+    search: '',
+    addItem(id, name, price, sku) {
+      const existing = this.cart.find(i => i.id === id);
+      if (existing) { existing.qty++; } 
+      else { this.cart.push({ id, name, price: parseFloat(price), sku, qty: 1 }); }
+    },
+    incQty(idx) { this.cart[idx].qty++; },
+    decQty(idx) { if (this.cart[idx].qty > 1) { this.cart[idx].qty--; } else { this.removeItem(idx); } },
+    removeItem(idx) { this.cart.splice(idx, 1); },
+    clearCart() { this.cart = []; },
+    total() { return this.cart.reduce((s, i) => s + i.price * i.qty, 0); },
+    submitSale() {
+      if (this.cart.length === 0) { alert('Agrega productos al carrito.'); return; }
+      document.getElementById('posForm').submit();
+    }
+  }
+}
+</script>
+{% endblock %}
+{% endblock %}

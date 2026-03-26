@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Categorías{% endblock %}
+{% block page_title %}Categorías de productos{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for category in categories %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:border-indigo-300 hover:shadow-md transition-all">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 text-lg">
+        <i class="{{ category.icon|default:'fa-solid fa-tag' }}"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <h3 class="font-semibold text-gray-800 truncate">{{ category.name }}</h3>
+        {% if category.parent %}
+        <p class="text-xs text-gray-400">Subcategoría de: {{ category.parent.name }}</p>
+        {% endif %}
+      </div>
+    </div>
+    <p class="text-2xl font-bold text-indigo-600">{{ category.product_set.count }}</p>
+    <p class="text-xs text-gray-400 mt-0.5">producto{{ category.product_set.count|pluralize }}</p>
+    <div class="mt-3 pt-3 border-t border-gray-50 flex justify-between text-xs">
+      {% with subs=category.category_set.count %}
+      {% if subs %}<span class="text-gray-500">{{ subs }} subcategoría{{ subs|pluralize }}</span>{% else %}<span></span>{% endif %}
+      {% endwith %}
+      <button class="text-indigo-600 hover:underline">Editar</button>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-span-full bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
+    <i class="fa-solid fa-tags text-4xl mb-3 block"></i>
+    <p class="font-medium">No hay categorías creadas</p>
+    <button class="mt-3 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fa-solid fa-plus"></i> Crear
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

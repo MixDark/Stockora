@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}Analítica{% endblock %}
+{% block page_title %}Analítica de inventario{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Top 10 productos más vendidos -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Top 10 productos más vendidos</h3>
+      <div style="position:relative;height:260px">
+        <canvas id="topProductsChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Distribución por categoría -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Stock por categoría</h3>
+      <div style="position:relative;height:260px">
+        <canvas id="categoryChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Análisis ABC -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <div>
+        <h3 class="font-semibold text-gray-800 dark:text-white">Análisis ABC</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Clasificación por valor acumulado de ventas: A (70%), B (20%), C (10%)</p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="px-5 py-3 text-left font-medium">Clase</th>
+            <th class="px-5 py-3 text-left font-medium">Producto</th>
+            <th class="px-5 py-3 text-right font-medium">Unidades vendidas</th>
+            <th class="px-5 py-3 text-right font-medium">Ingresos</th>
+            <th class="px-5 py-3 text-right font-medium">% acumulado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for item in abc_analysis %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+            <td class="px-5 py-3">
+              <span class="inline-flex items-center justify-center w-7 h-7 text-gray-800 dark:text-white rounded-lg text-xs font-bold">{{ item.abc_class }}</span>
+            </td>
+            <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product__name }}</td>
+            <td class="px-5 py-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ item.total_qty|intcomma }}</td>
+            <td class="px-5 py-3 text-right font-medium text-indigo-500">${{ item.total_revenue|peso }}</td>
+            <td class="px-5 py-3 text-right">
+              <div class="flex items-center justify-end gap-2">
+                <div class="w-20 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                  <div class="h-1.5 rounded-full bg-indigo-400 progress-bar" data-width="{{ item.cumulative_pct|floatformat:0 }}"></div>
+                </div>
+                <span class="text-xs font-mono w-10 text-right text-gray-600 dark:text-gray-300">{{ item.cumulative_pct|floatformat:1 }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center py-10 text-gray-400">No hay datos de ventas para el análisis ABC.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Productos de lento movimiento -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-800 dark:text-white">Productos de lento movimiento</h3>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Productos con stock disponible pero sin salidas en los últimos 30 días</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="px-5 py-3 text-left font-medium">Producto</th>
+            <th class="px-5 py-3 text-left font-medium">SKU</th>
+            <th class="px-5 py-3 text-right font-medium">Stock actual</th>
+            <th class="px-5 py-3 text-right font-medium">Valor inmovilizado</th>
+            <th class="px-5 py-3 text-left font-medium">Último movimiento</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for item in slow_moving %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+            <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+            <td class="px-5 py-3 font-mono text-xs text-gray-500 dark:text-gray-400">{{ item.product.sku }}</td>
+            <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300 font-medium">{{ item.quantity }}</td>
+            <td class="px-5 py-3 text-right font-medium text-gray-700 dark:text-gray-300">${{ item.immobilized_value|peso }}</td>
+            <td class="px-5 py-3 text-xs text-gray-500 dark:text-gray-400">{{ item.last_movement|date:"d/m/Y"|default:"Sin movimientos" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center py-10 text-gray-400">No se encontraron productos de lento movimiento.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="top-products-data" type="application/json">
+{
+  "labels": [{% for item in top_products %}"{{ item.product__name|truncatechars:20|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+  "data": [{% for item in top_products %}{{ item.total_qty }}{% if not forloop.last %},{% endif %}{% endfor %}]
+}
+</script>
+
+<script id="category-data" type="application/json">
+{
+  "labels": [{% for item in category_stock %}"{{ item.product__category__name|default:"Sin categoría"|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+  "data": [{% for item in category_stock %}{{ item.total_stock }}{% if not forloop.last %},{% endif %}{% endfor %}]
+}
+</script>
+
+<script>
+// Set progress bar widths
+document.querySelectorAll('.progress-bar').forEach(function(el) {
+  el.style.width = el.dataset.width + '%';
+});
+
+const isDark = document.documentElement.classList.contains('dark');
+const gridColor  = isDark ? 'rgba(255,255,255,0.08)' : '#f3f4f6';
+const tickColor  = isDark ? '#94a3b8' : '#6b7280';
+const borderColor = isDark ? '#1e293b' : '#fff';
+
+// Top productos chart
+const topProductsData = JSON.parse(document.getElementById('top-products-data').textContent);
+const topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
+const barColors = [
+  'rgba(99,102,241,0.85)',  // indigo
+  'rgba(245,158,11,0.85)',  // amber
+  'rgba(239,68,68,0.85)',   // red
+  'rgba(6,182,212,0.85)',   // cyan
+  'rgba(139,92,246,0.85)',  // violet
+  'rgba(236,72,153,0.85)',  // pink
+  'rgba(16,185,129,0.85)',  // emerald
+  'rgba(249,115,22,0.85)',  // orange
+  'rgba(59,130,246,0.85)',  // blue
+  'rgba(132,204,22,0.85)',  // lime
+];
+new Chart(topProductsCtx, {
+  type: 'bar',
+  data: {
+    labels: topProductsData.labels,
+    datasets: [{
+      label: 'Unidades vendidas',
+      data: topProductsData.data,
+      backgroundColor: topProductsData.data.map((_, i) => barColors[i % barColors.length]),
+      borderRadius: 6,
+      barThickness: 40,
+      maxBarThickness: 50,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { title: (items) => items[0].label } }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { color: tickColor, precision: 0 },
+        grid: { color: gridColor }
+      },
+      x: {
+        ticks: { color: tickColor },
+        grid: { display: false }
+      }
+    }
+  }
+});
+
+// Categoría pie chart
+const categoryData = JSON.parse(document.getElementById('category-data').textContent);
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+  type: 'doughnut',
+  data: {
+    labels: categoryData.labels,
+    datasets: [{
+      data: categoryData.data,
+      backgroundColor: ['#6366f1','#818cf8','#f59e0b','#ef4444','#06b6d4','#8b5cf6','#ec4899','#84cc16'],
+      borderWidth: 2,
+      borderColor: borderColor
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { color: tickColor, boxWidth: 12, padding: 12 }
+      }
+    }
+  }
+});
+</script>
+{% endblock %}

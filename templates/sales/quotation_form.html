@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Nueva cotización{% endblock %}
+{% block page_title %}Nueva cotización{% endblock %}
+
+{% block content %}
+<div x-data="quotationForm" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  <!-- Panel izquierdo: datos generales -->
+  <div class="space-y-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Datos de la cotización</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Cliente <span class="text-red-500">*</span></label>
+          <select x-model="customer" name="customer" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="">Seleccionar cliente</option>
+            {% for c in customers %}
+            <option value="{{ c.pk }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Válida hasta</label>
+          <input type="date" x-model="validUntil"
+                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notas</label>
+          <textarea x-model="notes" rows="3"
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agregar producto -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-3">Agregar producto</h3>
+      <div class="space-y-3">
+        <div class="flex gap-2">
+          <select x-ref="productSelect" x-model="selectedProduct"
+                  class="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="">Seleccionar producto</option>
+            {% for p in products %}
+            <option value="{{ p.pk }}" data-price="{{ p.sale_price }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button"
+                  @click="addProductById(selectedProduct)"
+                  :disabled="!selectedProduct"
+                  class="flex items-center justify-center w-10 h-10 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex-shrink-0">
+            <i class="fa-solid fa-plus text-sm"></i>
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 dark:text-gray-500">Selecciona un producto y presiona <span class="font-medium">+</span> para agregarlo. Puedes ajustar cantidad y descuento.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: carrito -->
+  <div class="xl:col-span-2 space-y-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Productos en la cotización</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <th class="px-4 py-3 text-left">Producto</th>
+              <th class="px-4 py-3 text-center w-24">Cantidad</th>
+              <th class="px-4 py-3 text-right w-36">Precio unit.</th>
+              <th class="px-4 py-3 text-right w-28">Descuento</th>
+              <th class="px-4 py-3 text-right w-32">Subtotal</th>
+              <th class="px-4 py-3 w-10"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            <template x-for="(item, idx) in cart" :key="item._key">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                <td class="px-4 py-2 font-medium text-gray-800 dark:text-white" x-text="item.name"></td>
+                <td class="px-4 py-2">
+                  <input type="number" min="1" x-model.number="item.qty" @input="calcTotals()"
+                         class="w-20 text-center border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                </td>
+                <td class="px-4 py-2">
+                  <input type="number" min="0" step="0.01" x-model.number="item.price" @input="calcTotals()"
+                         class="w-32 text-right border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                </td>
+                <td class="px-4 py-2">
+                  <input type="number" min="0" step="0.01" x-model.number="item.discount" @input="calcTotals()"
+                         class="w-24 text-right border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                </td>
+                <td class="px-4 py-2 text-right font-medium text-gray-800 dark:text-white"
+                    x-text="'$' + ((item.price * item.qty) - item.discount).toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})"></td>
+                <td class="px-4 py-2 text-center">
+                  <button type="button" @click="removeItem(idx)" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash text-xs"></i></button>
+                </td>
+              </tr>
+            </template>
+            <tr x-show="cart.length === 0">
+              <td colspan="6" class="text-center py-10 text-gray-400 text-sm">
+                <i class="fa-solid fa-file-invoice text-2xl mb-2 block"></i>Agrega productos desde el panel izquierdo
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <div class="text-sm text-gray-500 dark:text-gray-400">
+          <span x-text="cart.length + ' producto(s)'"></span>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Total</p>
+          <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400"
+             x-text="'$' + grandTotal.toLocaleString('es', {minimumFractionDigits:2, maximumFractionDigits:2})"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botones -->
+    <div class="flex gap-3 justify-end">
+      <a href="{% url 'sales:quotations' %}" class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm text-white font-medium transition-colors">
+        <i class="fa-solid fa-times mr-1"></i> Cancelar
+      </a>
+      <button type="button" @click="submitForm()"
+              class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-save mr-1"></i> Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Formulario oculto -->
+<form id="quotationFormHidden" method="post" action="{% url 'sales:quotation_create' %}">
+  {% csrf_token %}
+  <input type="hidden" name="customer"    id="hCustomer">
+  <input type="hidden" name="valid_until" id="hValidUntil">
+  <input type="hidden" name="notes"       id="hNotes">
+  <input type="hidden" name="items_data"  id="hItemsData">
+</form>
+
+{{ products_data|json_script:"products-data" }}
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.data('quotationForm', () => ({
+    customer: '',
+    validUntil: '',
+    notes: '',
+    selectedProduct: '',
+    cart: [],
+    grandTotal: 0,
+    _keyCounter: 0,
+
+    addProductById(id) {
+      if (!id) return;
+      const sel = this.$refs.productSelect;
+      const opt = sel.querySelector(`option[value="${id}"]`);
+      if (!opt) return;
+      this.addProduct({
+        id: parseInt(id),
+        name: opt.textContent.trim(),
+        price: parseFloat(opt.dataset.price || 0),
+      });
+      this.selectedProduct = '';
+    },
+
+    addProduct(p) {
+      const existing = this.cart.find(i => i.id === p.id);
+      if (existing) { existing.qty += 1; }
+      else { this.cart.push({ _key: this._keyCounter++, id: p.id, name: p.name, price: p.price, qty: 1, discount: 0 }); }
+      this.calcTotals();
+    },
+
+    removeItem(idx) { this.cart.splice(idx, 1); this.calcTotals(); },
+
+    calcTotals() {
+      this.grandTotal = this.cart.reduce((s, i) => s + (i.price * i.qty) - i.discount, 0);
+    },
+
+    submitForm() {
+      if (!this.customer || this.cart.length === 0) return;
+      document.getElementById('hCustomer').value   = this.customer;
+      document.getElementById('hValidUntil').value = this.validUntil;
+      document.getElementById('hNotes').value      = this.notes;
+      document.getElementById('hItemsData').value  = JSON.stringify(
+        this.cart.map(i => ({ id: i.id, qty: i.qty, price: i.price, discount: i.discount }))
+      );
+      document.getElementById('quotationFormHidden').submit();
+    },
+  }));
+});
+</script>
+{% endblock %}

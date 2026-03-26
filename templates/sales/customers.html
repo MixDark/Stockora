@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% block title %}Clientes{% endblock %}
+{% block page_title %}Clientes{% endblock %}
+
+{% block content %}
+<div x-data="{
+  showModal: false,
+  showEdit: false,
+  showDelete: false,
+  editPk: null,
+  editName: '',
+  editEmail: '',
+  editPhone: '',
+  editTaxId: '',
+  editAddress: '',
+  deletePk: null,
+  deleteName: '',
+  openEdit(pk, name, email, phone, taxId, address) {
+    this.editPk = pk;
+    this.editName = name;
+    this.editEmail = email;
+    this.editPhone = phone;
+    this.editTaxId = taxId;
+    this.editAddress = address;
+    this.showEdit = true;
+  }
+}">
+
+<!-- Modal editar cliente -->
+<div x-show="showEdit" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     @keydown.escape.window="showEdit = false">
+  <div class="absolute inset-0 bg-black/50" @click="showEdit = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-white flex-1 text-center">Editar cliente</h3>
+      <button @click="showEdit = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form method="POST" :action="`/ventas/clientes/${editPk}/editar/`" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" name="name" :value="editName" required
+               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Email</label>
+          <input type="email" name="email" :value="editEmail"
+                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Teléfono</label>
+          <input type="text" name="phone" :value="editPhone"
+                 class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">NIT / CC</label>
+        <input type="text" name="tax_id" :value="editTaxId"
+               class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">Dirección</label>
+        <textarea name="address" rows="2" x-text="editAddress"
+                  class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea>
+      </div>
+      <div class="flex justify-center gap-3 pt-1">
+        <button type="button" @click="showEdit = false"
+                class="px-8 py-2.5 rounded-lg text-sm font-medium btn-cancel transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+                class="px-8 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal confirmar eliminación de cliente -->
+<div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showDelete = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <div class="flex justify-center mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-trash text-red-600 dark:text-red-400 text-lg"></i>
+      </div>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Eliminar cliente</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      ¿Estás seguro de eliminar a
+      <span class="font-semibold text-gray-800 dark:text-white" x-text="deleteName"></span>?
+      Esta acción no se puede deshacer.
+    </p>
+    <form method="POST" :action="`/ventas/clientes/${deletePk}/eliminar/`">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="button" @click="showDelete = false"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+        </button>
+        <button type="submit"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-trash mr-1"></i>Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal nuevo cliente -->
+<div x-show="showModal" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     @keydown.escape.window="showModal = false">
+  <div class="absolute inset-0 bg-black/50" @click="showModal = false"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-semibold text-gray-800 flex-1 text-center">Información del cliente</h3>
+      <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form method="POST" action="{% url 'sales:customer_create' %}" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-800 mb-1">Nombre <span class="text-red-500">*</span></label>
+        <input type="text" name="name" required autofocus
+               class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-800 mb-1">Email</label>
+          <input type="email" name="email"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-800 mb-1">Teléfono</label>
+          <input type="text" name="phone"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-800 mb-1">NIT / CC</label>
+        <input type="text" name="tax_id"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-800 mb-1">Dirección</label>
+        <textarea name="address" rows="2"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"></textarea>
+      </div>
+      <div class="flex justify-center gap-3 pt-1">
+        <button type="button" @click="showModal = false"
+                class="px-8 py-2.5 rounded-lg text-sm font-medium btn-cancel transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+                class="px-8 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+    <form method="get" class="relative flex-1 max-w-sm">
+      <span class="absolute inset-y-0 left-3 flex items-center text-gray-400"><i class="fa-solid fa-search text-xs"></i></span>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Buscar cliente"
+             class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </form>
+    <button type="button" @click="showModal = true"
+            class="sm:w-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+      <i class="fa-solid fa-plus"></i> Nuevo
+    </button>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+        <tr>
+          <th class="px-5 py-3 text-left font-medium">Nombre</th>
+          <th class="px-5 py-3 text-left font-medium">Email</th>
+          <th class="px-5 py-3 text-left font-medium">Teléfono</th>
+          <th class="px-5 py-3 text-left font-medium">NIT / CC</th>
+          <th class="px-5 py-3 text-left font-medium">Ventas</th>
+          <th class="px-5 py-3 text-left font-medium">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for customer in customers %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-5 py-3 font-medium text-gray-800">{{ customer.name }}</td>
+          <td class="px-5 py-3 text-gray-500">{{ customer.email|default:"—" }}</td>
+          <td class="px-5 py-3 text-gray-500">{{ customer.phone|default:"—" }}</td>
+          <td class="px-5 py-3 font-mono text-xs text-gray-500">{{ customer.tax_id|default:"—" }}</td>
+          <td class="px-5 py-3 text-gray-600">{{ customer.sale_set.count }}</td>
+          <td class="px-5 py-3 text-left">
+            <div class="flex items-center gap-1">
+              <a href="{% url 'sales:customer_detail' customer.pk %}"
+                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-400 transition-colors"
+                 title="Ver cliente">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <button @click="openEdit({{ customer.pk }}, '{{ customer.name|escapejs }}', '{{ customer.email|default:''|escapejs }}', '{{ customer.phone|default:''|escapejs }}', '{{ customer.tax_id|default:''|escapejs }}', '{{ customer.address|default:''|escapejs }}')"
+                      class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/40 transition-colors"
+                      title="Editar cliente">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button @click="deletePk = {{ customer.pk }}; deleteName = '{{ customer.name|escapejs }}'; showDelete = true"
+                      class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                      title="Eliminar cliente">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-12 text-gray-400">
+            <i class="fa-solid fa-users text-3xl mb-3 block"></i>
+            No hay clientes registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if customers.has_other_pages %}
+  <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+    <span>Mostrando {{ customers.start_index }}–{{ customers.end_index }}</span>
+    <div class="flex gap-1">
+      {% if customers.has_previous %}<a href="?page={{ customers.previous_page_number }}&q={{ request.GET.q }}" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">‹</a>{% endif %}
+      {% if customers.has_next %}<a href="?page={{ customers.next_page_number }}&q={{ request.GET.q }}" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ supplier.name }}{% endblock %}
+{% block page_title %}{{ supplier.name }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div class="w-14 h-14 bg-blue-100 dark:bg-blue-900/40 rounded-xl flex items-center justify-center mb-4">
+        <i class="fa-solid fa-truck text-blue-600 dark:text-blue-400 text-2xl"></i>
+      </div>
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">{{ supplier.name }}</h2>
+      <div class="space-y-2 text-sm text-gray-800 dark:text-white">
+        {% if supplier.contact_name %}<p><span class="text-gray-500 dark:text-gray-400">Contacto:</span> {{ supplier.contact_name }}</p>{% endif %}
+        {% if supplier.email %}<p><span class="text-gray-500 dark:text-gray-400">Email:</span> {{ supplier.email }}</p>{% endif %}
+        {% if supplier.phone %}<p><span class="text-gray-500 dark:text-gray-400">Teléfono:</span> {{ supplier.phone }}</p>{% endif %}
+        {% if supplier.tax_id %}<p><span class="text-gray-500 dark:text-gray-400">NIT:</span> {{ supplier.tax_id }}</p>{% endif %}
+        {% if supplier.address %}<p><span class="text-gray-500 dark:text-gray-400">Dirección:</span> {{ supplier.address }}</p>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="xl:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Últimas órdenes de compra</h3>
+        <a href="{% url 'suppliers:orders' %}" class="text-sm text-indigo-600 hover:text-indigo-800 font-medium">Ver todas →</a>
+      </div>
+      <div class="overflow-x-auto">
+        {% if orders %}
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+            <th class="px-5 py-3">Nº Orden</th><th class="px-5 py-3">Estado</th><th class="px-5 py-3">Fecha esperada</th><th class="px-5 py-3">Creada</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for o in orders %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+              <td class="px-5 py-3"><a href="{% url 'suppliers:order_detail' o.pk %}" class="font-medium text-indigo-600 hover:text-indigo-800">OC-{{ o.order_number }}</a></td>
+              <td class="px-5 py-3"><span class="text-xs px-2 py-0.5 rounded-full font-medium text-gray-800 dark:text-white">{{ o.get_status_display }}</span></td>
+              <td class="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ o.expected_date|date:"d/m/Y"|default:'—' }}</td>
+              <td class="px-5 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ o.created_at|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">Sin órdenes de compra.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

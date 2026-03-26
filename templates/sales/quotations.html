@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Cotizaciones{% endblock %}
+{% block page_title %}Cotizaciones{% endblock %}
+
+{% block content %}
+<div x-data="{ showDelete: false, deletePk: null, deleteNumber: '' }">
+
+<!-- Modal confirmar eliminación de cotización -->
+<div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showDelete = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <div class="flex justify-center mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-trash text-red-600 dark:text-red-400 text-lg"></i>
+      </div>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Eliminar cotización</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      ¿Estás seguro de eliminar la cotización
+      <span class="font-semibold text-gray-800 dark:text-white" x-text="deleteNumber"></span>?
+      Esta acción no se puede deshacer.
+    </p>
+    <form method="POST" :action="`/ventas/cotizaciones/${deletePk}/eliminar/`">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="button" @click="showDelete = false"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+        </button>
+        <button type="submit"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-trash mr-1"></i>Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+  <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+    <form method="get" class="flex gap-2 flex-1 max-w-xl flex-wrap">
+      <div class="relative flex-1 min-w-40">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400"><i class="fa-solid fa-search text-xs"></i></span>
+        <input type="text" name="q" value="{{ query }}" placeholder="Buscar cotizacion"
+               class="w-full pl-8 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <select name="status" class="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+        <option value="">Todos los estados</option>
+        <option value="draft"    {% if selected_status == 'draft'    %}selected{% endif %}>Borrador</option>
+        <option value="sent"     {% if selected_status == 'sent'     %}selected{% endif %}>Enviada</option>
+        <option value="accepted" {% if selected_status == 'accepted' %}selected{% endif %}>Aceptada</option>
+        <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rechazada</option>
+        <option value="expired"  {% if selected_status == 'expired'  %}selected{% endif %}>Vencida</option>
+      </select>
+      <button type="submit" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-white flex items-center gap-2">
+        <i class="fa-solid fa-filter"></i> Filtrar
+      </button>
+    </form>
+    <a href="{% url 'sales:quotation_create' %}" class="sm:w-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-plus"></i> Nueva
+    </a>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+        <tr>
+          <th class="px-5 py-3 text-left font-medium">#</th>
+          <th class="px-5 py-3 text-left font-medium">Cliente</th>
+          <th class="px-5 py-3 text-left font-medium">Fecha</th>
+          <th class="px-5 py-3 text-left font-medium">Vence</th>
+          <th class="px-5 py-3 text-right font-medium">Total</th>
+          <th class="px-5 py-3 text-left font-medium">Estado</th>
+          <th class="px-5 py-3 text-left font-medium">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+        {% for q in quotations %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <td class="px-5 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">{{ q.quotation_number }}</td>
+          <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ q.customer.name }}</td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ q.created_at|date:"d/m/Y" }}</td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ q.valid_until|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-5 py-3 text-right font-medium text-gray-800 dark:text-white">${{ q.total|peso }}</td>
+          <td class="px-5 py-3">
+            {% if q.status == 'accepted' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Aceptada</span>
+            {% elif q.status == 'rejected' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">Rechazada</span>
+            {% elif q.status == 'sent' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">Enviada</span>
+            {% elif q.status == 'expired' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Vencida</span>
+            {% else %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Borrador</span>{% endif %}
+          </td>
+          <td class="px-5 py-3 text-left">
+            <div class="flex items-center gap-1">
+              <a href="{% url 'sales:quotation_detail' q.pk %}"
+                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-400 transition-colors"
+                 title="Ver cotización">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <button @click="deletePk = {{ q.pk }}; deleteNumber = '{{ q.quotation_number }}'; showDelete = true"
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                title="Eliminar cotización">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-12 text-gray-400">
+            <i class="fa-solid fa-file-invoice text-3xl mb-3 block"></i>
+            No hay cotizaciones registradas.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-center gap-2">
+    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&status={{ selected_status }}&q={{ query }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-white">Anterior</a>{% endif %}
+    <span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">Pág. {{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}&status={{ selected_status }}&q={{ query }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-white">Siguiente</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

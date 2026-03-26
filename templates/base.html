@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Stockora{% endblock %} | Stockora</title>
+
+  {% load static %}
+  <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+  <link rel="alternate icon" href="{% static 'images/favicon.ico' %}">
+
+  <!-- Anti-FOUC: aplica tema antes del render -->
+  <script>
+    (function () {
+      if (localStorage.getItem('stockora-theme') === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { DEFAULT: '#4f46e5', 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
+            sidebar: '#1e1b4b',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Heroicons via unpkg -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  {% block extra_css %}{% endblock %}
+
+  <style>
+    [x-cloak] { display: none !important; }
+    .btn-cancel {
+      background-color: #4f46e5 !important;
+      color: #ffffff !important;
+      border: none !important;
+    }
+    .btn-cancel:hover {
+      background-color: #4338ca !important;
+    }
+    .sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      color: #c7d2fe;
+      transition: all 150ms;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .sidebar-link:hover { background-color: #3730a3; color: #fff; }
+    .sidebar-link.active { background-color: #4338ca; color: #fff; font-weight: 500; }
+    .stat-card {
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05);
+      border: 1px solid #f3f4f6;
+      padding: 1.25rem;
+    }
+    .dark .stat-card {
+      background: #1e293b;
+      border-color: #334155;
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / .3);
+    }
+
+    /* ── Dark mode global overrides ── */
+    .dark .bg-white           { background-color: #1e293b !important; }
+    .dark .bg-gray-50         { background-color: #0f172a !important; }
+    .dark .bg-gray-100        { background-color: #334155 !important; }
+    .dark .bg-gray-200        { background-color: #475569 !important; }
+
+    .dark .border-gray-100    { border-color: #334155 !important; }
+    .dark .border-gray-200    { border-color: #475569 !important; }
+    .dark .border-gray-300    { border-color: #475569 !important; }
+    .dark .divide-gray-50 > * + * { border-color: #334155 !important; }
+    .dark .divide-gray-100 > * + * { border-color: #334155 !important; }
+    .dark .divide-gray-200 > * + * { border-color: #475569 !important; }
+
+    /* Textos modo claro → negro; modo oscuro → blanco */
+    .text-gray-800            { color: #000000 !important; }
+    .text-gray-700            { color: #111111 !important; }
+    .text-gray-600            { color: #222222 !important; }
+    .text-gray-500            { color: #444444 !important; }
+    .text-gray-400            { color: #666666 !important; }
+
+    .dark .text-gray-800      { color: #ffffff !important; }
+    .dark .text-gray-700      { color: #f0f0f0 !important; }
+    .dark .text-gray-600      { color: #d4d4d4 !important; }
+    .dark .text-gray-500      { color: #a0a0a0 !important; }
+    .dark .text-gray-400      { color: #707070 !important; }
+
+    .dark .shadow-sm          { box-shadow: 0 1px 3px 0 rgb(0 0 0 / .4) !important; }
+    .dark .shadow             { box-shadow: 0 2px 6px 0 rgb(0 0 0 / .5) !important; }
+
+    /* Hover en filas de tabla */
+    .dark .hover\:bg-gray-50:hover  { background-color: #263148 !important; }
+    .dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
+
+    /* Inputs y selects */
+    .dark input:not([type="range"]),
+    .dark select,
+    .dark textarea {
+      background-color: #0f172a !important;
+      border-color: #475569 !important;
+      color: #f1f5f9 !important;
+    }
+    .dark input::placeholder,
+    .dark textarea::placeholder { color: #64748b !important; }
+    .dark input:focus,
+    .dark select:focus,
+    .dark textarea:focus {
+      border-color: #6366f1 !important;
+      outline-color: #6366f1 !important;
+    }
+
+    /* Badges con fondo claro */
+    .dark .bg-indigo-100 { background-color: #312e81 !important; }
+    .dark .bg-indigo-50  { background-color: #1e1b4b !important; }
+    .dark .bg-emerald-100 { background-color: #064e3b !important; }
+    .dark .bg-emerald-50  { background-color: #022c22 !important; }
+    .dark .bg-amber-100  { background-color: #78350f !important; }
+    .dark .bg-amber-50   { background-color: #451a03 !important; }
+    .dark .bg-red-100    { background-color: #7f1d1d !important; }
+    .dark .bg-red-50     { background-color: #450a0a !important; }
+    .dark .bg-green-100  { background-color: #14532d !important; }
+    .dark .bg-green-50   { background-color: #052e16 !important; }
+    .dark .bg-blue-100   { background-color: #1e3a5f !important; }
+    .dark .bg-blue-50    { background-color: #0c1f3a !important; }
+    .dark .bg-yellow-50  { background-color: #3d2a00 !important; }
+    .dark .bg-purple-100 { background-color: #3b0764 !important; }
+    .dark .bg-purple-50  { background-color: #1e003a !important; }
+
+    /* Progress bars y fondos de barra */
+    .dark .bg-amber-200  { background-color: #92400e !important; }
+    .dark .bg-gray-200   { background-color: #334155 !important; }
+
+    /* Scrollbar oscura */
+    .dark ::-webkit-scrollbar        { background: #1e293b; }
+    .dark ::-webkit-scrollbar-thumb  { background: #475569; border-radius: 4px; }
+
+    /* Icono de calendario en inputs de fecha */
+    .dark input[type="date"] { color-scheme: dark; }
+    input[type="date"]       { color-scheme: light; }
+  </style>
+</head>
+
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200"
+      x-data="{
+        sidebarOpen: false,
+        darkMode: localStorage.getItem('stockora-theme') === 'dark',
+        toggleTheme() {
+          this.darkMode = !this.darkMode;
+          document.documentElement.classList.toggle('dark', this.darkMode);
+          localStorage.setItem('stockora-theme', this.darkMode ? 'dark' : 'light');
+        }
+      }">
+
+<!-- ═══════════════════════════════════════════════════════ LAYOUT ═══ -->
+<div class="flex h-screen overflow-hidden">
+
+  <!-- ─── Overlay mobile ─────────────────────────────────────────── -->
+  <div x-show="sidebarOpen"
+       x-cloak
+       @click="sidebarOpen = false"
+       class="fixed inset-0 z-20 bg-black/50 lg:hidden"></div>
+
+  <!-- ─── SIDEBAR ────────────────────────────────────────────────── -->
+  <aside class="fixed inset-y-0 left-0 z-30 w-64 flex flex-col bg-indigo-950 transform transition-transform duration-200
+                lg:translate-x-0 lg:static lg:inset-auto lg:z-auto"
+         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-3 h-16 px-5 border-b border-indigo-800">
+      <div class="flex items-center justify-center">
+        <svg width="34" height="34" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="slg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#818cf8"/>
+              <stop offset="100%" stop-color="#a78bfa"/>
+            </linearGradient>
+          </defs>
+          <rect width="72" height="72" rx="18" fill="url(#slg)"/>
+          <rect x="14" y="44" width="10" height="16" rx="3" fill="white" opacity="0.7"/>
+          <rect x="30" y="32" width="10" height="28" rx="3" fill="white" opacity="0.85"/>
+          <rect x="46" y="18" width="10" height="42" rx="3" fill="white"/>
+          <circle cx="51" cy="12" r="4" fill="#c7d2fe"/>
+        </svg>
+      </div>
+      <span class="text-white font-bold text-xl tracking-tight">STOCKORA</span>
+    </div>
+
+    <!-- Navegación -->
+    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+
+      <p class="px-4 py-1 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Principal</p>
+      <a href="{% url 'accounts:dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+        <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
+      </a>
+
+      <p class="px-4 pt-3 pb-1 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Inventario</p>
+      <a href="{% url 'products:list' %}" class="sidebar-link {% if 'products' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-box w-5 text-center"></i> Productos
+      </a>
+      <a href="{% url 'inventory:stock' %}" class="sidebar-link {% if request.resolver_match.url_name == 'stock' %}active{% endif %}">
+        <i class="fa-solid fa-warehouse w-5 text-center"></i> Stock
+      </a>
+      <a href="{% url 'inventory:movements' %}" class="sidebar-link {% if request.resolver_match.url_name == 'movements' %}active{% endif %}">
+        <i class="fa-solid fa-arrow-right-arrow-left w-5 text-center"></i> Movimientos
+      </a>
+      <a href="{% url 'inventory:warehouses' %}" class="sidebar-link {% if request.resolver_match.url_name == 'warehouses' %}active{% endif %}">
+        <i class="fa-solid fa-building w-5 text-center"></i> Almacenes
+      </a>
+
+      <p class="px-4 pt-3 pb-1 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Compras & Ventas</p>
+      <a href="{% url 'suppliers:list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'list' and 'suppliers' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-truck w-5 text-center"></i> Proveedores
+      </a>
+      <a href="{% url 'suppliers:orders' %}" class="sidebar-link {% if request.resolver_match.url_name == 'orders' %}active{% endif %}">
+        <i class="fa-solid fa-file-invoice w-5 text-center"></i> Órdenes de compra
+      </a>
+      <a href="{% url 'sales:pos' %}" class="sidebar-link {% if request.resolver_match.url_name == 'pos' %}active{% endif %}">
+        <i class="fa-solid fa-cash-register w-5 text-center"></i> Punto de venta
+      </a>
+      <a href="{% url 'sales:list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'list' and 'sales' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-receipt w-5 text-center"></i> Ventas
+      </a>
+      <a href="{% url 'sales:customers' %}" class="sidebar-link {% if request.resolver_match.url_name == 'customers' %}active{% endif %}">
+        <i class="fa-solid fa-users w-5 text-center"></i> Clientes
+      </a>
+      <a href="{% url 'sales:quotations' %}" class="sidebar-link {% if request.resolver_match.url_name == 'quotations' %}active{% endif %}">
+        <i class="fa-solid fa-file-lines w-5 text-center"></i> Cotizaciones
+      </a>
+      <a href="{% url 'sales:returns' %}" class="sidebar-link {% if request.resolver_match.url_name == 'returns' %}active{% endif %}">
+        <i class="fa-solid fa-rotate-left w-5 text-center"></i> Devoluciones
+      </a>
+
+      <p class="px-4 pt-3 pb-1 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Análisis</p>
+      <a href="{% url 'analytics:home' %}" class="sidebar-link {% if 'analytics' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-chart-line w-5 text-center"></i> Analítica
+      </a>
+      <a href="{% url 'reports:home' %}" class="sidebar-link {% if 'reports' in request.resolver_match.namespace %}active{% endif %}">
+        <i class="fa-solid fa-chart-bar w-5 text-center"></i> Reportes
+      </a>
+
+      {% if user.is_admin %}
+      <p class="px-4 pt-3 pb-1 text-xs font-semibold text-indigo-400 uppercase tracking-wider">Administración</p>
+      <a href="{% url 'accounts:user_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+        <i class="fa-solid fa-user-gear w-5 text-center"></i> Usuarios
+      </a>
+      <a href="{% url 'accounts:audit_log' %}" class="sidebar-link {% if request.resolver_match.url_name == 'audit_log' %}active{% endif %}">
+        <i class="fa-solid fa-scroll w-5 text-center"></i> Log de auditoría
+      </a>
+      {% endif %}
+    </nav>
+
+    <!-- Usuario -->
+    <div class="border-t border-indigo-800 p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-full h-full object-cover" alt="">
+          {% else %}
+          {{ user.get_full_name|first|upper|default:user.username|first|upper }}
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm text-white font-medium truncate">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-xs text-indigo-400 truncate">{{ user.get_role_display }}</p>
+        </div>
+        <form method="POST" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="text-indigo-400 hover:text-white transition-colors cursor-pointer" title="Cerrar sesión">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </aside>
+  <!-- ─── /SIDEBAR ─────────────────────────────────────────────── -->
+
+  <!-- ─── CONTENIDO PRINCIPAL ────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- Top navbar -->
+    <header class="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 lg:px-6 flex-shrink-0 transition-colors duration-200">
+      <div class="flex items-center gap-3">
+        <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+        <div class="flex items-center gap-2">
+          {% block title_prefix %}{% endblock %}
+          <div>
+            <h1 class="text-base font-semibold text-gray-800 dark:text-gray-100">{% block page_title %}Dashboard{% endblock %}</h1>
+            {% block breadcrumb %}{% endblock %}
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- Notificaciones -->
+        <a href="{% url 'notifications:list' %}"
+           class="relative text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/40">
+          <i class="fa-solid fa-bell text-lg"></i>
+          {% if unread_notifications_count %}
+          <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          {% endif %}
+        </a>
+
+        <!-- Toggle tema -->
+        <button @click="toggleTheme()"
+                class="text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/40"
+                :title="darkMode ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'">
+          <i class="fa-solid text-lg" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+        </button>
+
+        {% block header_action %}{% endblock header_action %}
+
+        <!-- Perfil -->
+        <a href="{% url 'accounts:profile' %}"
+           class="w-8 h-8 rounded-full overflow-hidden bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold text-sm hover:ring-2 hover:ring-indigo-400 transition-all">
+          {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="w-full h-full object-cover" alt="">
+          {% else %}
+          {{ user.get_full_name|first|upper|default:user.username|first|upper }}
+          {% endif %}
+        </a>
+      </div>
+    </header>
+
+    <!-- Mensajes de Django (solo el último) -->
+    {% if messages %}
+    <div class="px-4 lg:px-6 pt-3 flex-shrink-0 flex justify-end">
+      {% for message in messages %}{% if forloop.last %}
+      <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 3000)"
+           x-show="show" x-transition
+           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs
+           {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700 text-green-800 dark:text-green-300
+           {% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 text-red-800 dark:text-red-300
+           {% elif message.tags == 'warning' %}bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-700 text-yellow-800 dark:text-yellow-300
+           {% else %}bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-300{% endif %}">
+        <i class="fa-solid fa-circle-info flex-shrink-0"></i>
+        <span>{{ message }}</span>
+        <button @click="show = false" class="flex-shrink-0 opacity-60 hover:opacity-100 ml-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Contenido de la página -->
+    <main class="flex-1 overflow-y-auto px-4 lg:px-6 py-6">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+  <!-- ─── /CONTENIDO PRINCIPAL ───────────────────────────────────── -->
+
+</div>
+<!-- ═══════════════════════════════════════════════════════ /LAYOUT ═══ -->
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

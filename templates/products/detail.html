@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  <!-- Info principal -->
+  <div class="xl:col-span-2 space-y-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <div class="flex items-start gap-5">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-24 h-24 object-cover rounded-xl">
+        {% else %}
+        <div class="w-24 h-24 bg-indigo-100 dark:bg-indigo-900/40 rounded-xl flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-box text-indigo-400 text-3xl"></i>
+        </div>
+        {% endif %}
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-3 mb-2">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-white">{{ product.name }}</h2>
+            {% if product.is_active %}
+            <span class="text-black dark:text-white text-xs font-medium">Activo</span>
+            {% else %}
+            <span class="text-black dark:text-white text-xs font-medium">Inactivo</span>
+            {% endif %}
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ product.description|default:'Sin descripción.' }}</p>
+          <div class="flex flex-wrap gap-4 text-sm">
+            <div><span class="text-gray-400 dark:text-gray-500">SKU:</span> <span class="font-mono font-medium text-gray-800 dark:text-white">{{ product.sku }}</span></div>
+            {% if product.barcode %}<div><span class="text-gray-400 dark:text-gray-500">Código de barras:</span> <span class="font-mono text-gray-800 dark:text-white">{{ product.barcode }}</span></div>{% endif %}
+            <div><span class="text-gray-400 dark:text-gray-500">Unidad:</span> <span class="text-gray-800 dark:text-white">{{ product.get_unit_display }}</span></div>
+            {% if product.category %}<div><span class="text-gray-400 dark:text-gray-500">Categoría:</span> <span class="text-gray-800 dark:text-white">{{ product.category.name }}</span></div>{% endif %}
+          </div>
+        </div>
+        <a href="{% url 'products:edit' product.pk %}"
+           class="flex-shrink-0 bg-indigo-50 dark:bg-indigo-900/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+          <i class="fa-solid fa-pen mr-1"></i> Editar
+        </a>
+      </div>
+    </div>
+
+    <!-- Precios -->
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Precio de costo</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">${{ product.cost_price|peso }}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Precio de venta</p>
+        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">${{ product.sale_price|peso }}</p>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 text-center">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Margen de ganancia</p>
+        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ product.profit_margin|floatformat:1 }}%</p>
+      </div>
+    </div>
+
+    <!-- Últimos movimientos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Últimos movimientos</h3>
+      </div>
+      <div class="overflow-x-auto">
+        {% if movements %}
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+              <th class="px-5 py-3 font-medium">Tipo</th>
+              <th class="px-5 py-3 font-medium text-right">Cantidad</th>
+              <th class="px-5 py-3 font-medium">Referencia</th>
+              <th class="px-5 py-3 font-medium">Responsable</th>
+              <th class="px-5 py-3 font-medium">Fecha</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for m in movements %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-5 py-3">
+                <span class="text-xs px-2 py-0.5 rounded-full font-medium
+                  {% if m.movement_type == 'in' %}text-black dark:text-white
+                  {% elif m.movement_type == 'out' %}text-black dark:text-white
+                  {% else %}text-black dark:text-white{% endif %}">
+                  {{ m.get_movement_type_display }}
+                </span>
+              </td>
+              <td class="px-5 py-3 text-right font-medium
+                {% if m.movement_type == 'in' %}text-gray-800{% elif m.movement_type == 'out' %}text-red-600{% else %}text-blue-600{% endif %}">
+                {% if m.movement_type == 'in' %}+{% elif m.movement_type == 'out' %}-{% endif %}{{ m.quantity }}
+              </td>
+              <td class="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ m.reference|default:'—' }}</td>
+              <td class="px-5 py-3 text-gray-500 dark:text-gray-400 text-xs">{{ m.performed_by.get_full_name|default:m.performed_by.username|default:'—' }}</td>
+              <td class="px-5 py-3 text-gray-400 dark:text-gray-500 text-xs">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">Sin movimientos registrados.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lateral -->
+  <div class="space-y-6">
+
+    <!-- Stock por almacén -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Stock actual</h3>
+        <a href="{% url 'inventory:movement_create' %}?product={{ product.pk }}"
+           class="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium">+ Movimiento</a>
+      </div>
+      <div class="p-4 space-y-3">
+        {% if stock_items %}
+          {% for item in stock_items %}
+          <div class="flex items-center justify-between p-3 rounded-lg {% if item.is_low_stock %}bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %}">
+            <div>
+              <p class="text-sm font-medium text-gray-800 dark:text-white">{{ item.warehouse.name }}</p>
+              {% if item.location %}<p class="text-xs text-gray-400 dark:text-gray-500">{{ item.location }}</p>{% endif %}
+            </div>
+            <div class="text-right">
+              <span class="text-xl font-bold {% if item.is_low_stock %}text-amber-600{% else %}text-gray-800 dark:text-white{% endif %}">
+                {{ item.quantity|intcomma }}
+              </span>
+              <p class="text-xs text-gray-400 dark:text-gray-500">uds.</p>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-center text-sm text-gray-400 dark:text-gray-500 py-4">Sin stock registrado en ningún almacén.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Lotes (si aplica) -->
+    {% if product.has_batches and batches %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Lotes</h3>
+      </div>
+      <div class="p-4 space-y-2">
+        {% for batch in batches %}
+        <div class="flex items-center justify-between text-sm p-2 rounded-lg {% if batch.is_expired %}bg-red-50 dark:bg-red-900/20{% elif batch.days_to_expiry and batch.days_to_expiry < 30 %}bg-amber-50 dark:bg-amber-900/20{% else %}bg-gray-50 dark:bg-gray-700/50{% endif %}">
+          <div>
+            <p class="font-medium text-gray-800 dark:text-white">Lote {{ batch.batch_number }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">
+              {% if batch.expiry_date %}Vence: {{ batch.expiry_date|date:"d/m/Y" }}{% endif %}
+            </p>
+          </div>
+          <span class="font-bold {% if batch.is_expired %}text-red-600{% else %}text-gray-700 dark:text-white{% endif %}">
+            {{ batch.quantity }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

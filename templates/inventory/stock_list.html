@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}Stock{% endblock %}
+{% block page_title %}Inventario - Stock actual{% endblock %}
+
+{% block content %}
+<div x-data="{ showDelete: false, deletePk: null, deleteName: '' }">
+
+<!-- Modal confirmar eliminación -->
+<div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showDelete = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <div class="flex justify-center mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-trash text-red-600 dark:text-red-400 text-lg"></i>
+      </div>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Eliminar stock</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      ¿Estás seguro de que deseas eliminar el stock de
+      <span class="font-bold text-gray-800 dark:text-white" x-text="deleteName"></span>?
+      Esta acción no se puede deshacer.
+    </p>
+    <form method="POST" :action="`/inventario/stock/${deletePk}/eliminar/`">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="button" @click="showDelete = false"
+          class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-trash"></i> Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Botón registrar -->
+<div class="mb-4">
+  <a href="{% url 'inventory:movement_create' %}"
+     class="sm:w-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+    <i class="fa-solid fa-arrow-right-arrow-left"></i> Registrar
+  </a>
+</div>
+
+<div class="flex flex-col sm:flex-row gap-3 mb-6">
+  <form method="GET" class="flex-1 flex gap-2">
+    <div class="relative flex-1">
+      <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+        <i class="fa-solid fa-search text-sm"></i>
+      </span>
+      <input type="text" name="q" value="{{ query }}" placeholder="Buscar producto"
+             class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <select name="warehouse" class="border border-gray-300 rounded-lg text-sm px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+      <option value="">Todos los almacenes</option>
+      {% for w in warehouses %}
+      <option value="{{ w.id }}" {% if selected_warehouse == w.id|stringformat:'s' %}selected{% endif %}>{{ w.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><i class="fa-solid fa-filter"></i> Filtrar</button>
+  </form>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+  {% if page.object_list %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+          <th class="px-5 py-3 font-medium">Producto</th>
+          <th class="px-5 py-3 font-medium">SKU</th>
+          <th class="px-5 py-3 font-medium">Almacén</th>
+          <th class="px-5 py-3 font-medium">Ubicación</th>
+          <th class="px-5 py-3 font-medium text-right">Cantidad</th>
+          <th class="px-5 py-3 font-medium text-right">Reservado</th>
+          <th class="px-5 py-3 font-medium text-right">Disponible</th>
+          <th class="px-5 py-3 font-medium text-center">Estado</th>
+          <th class="px-5 py-3 font-medium text-center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for item in page.object_list %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <td class="px-5 py-3">
+            <a href="{% url 'products:detail' item.product.pk %}" class="font-medium text-gray-800 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              {{ item.product.name|truncatechars:35 }}
+            </a>
+          </td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs">{{ item.product.sku }}</td>
+          <td class="px-5 py-3 text-gray-700 dark:text-gray-300">{{ item.warehouse.name }}</td>
+          <td class="px-5 py-3 text-gray-400 dark:text-gray-500 text-xs">{% if item.location %}{{ item.location.code }}{% else %}—{% endif %}</td>
+          <td class="px-5 py-3 text-right font-bold {% if item.quantity == 0 %}text-red-600{% elif item.is_low_stock %}text-amber-600{% else %}text-gray-800 dark:text-white{% endif %}">
+            {{ item.quantity|intcomma }}
+          </td>
+          <td class="px-5 py-3 text-right text-gray-500 dark:text-gray-400">{{ item.reserved_quantity|intcomma }}</td>
+          <td class="px-5 py-3 text-right font-medium text-gray-700 dark:text-gray-300">{{ item.available_quantity|intcomma }}</td>
+          <td class="px-5 py-3 text-center">
+            {% if item.quantity == 0 %}
+              <span class="text-gray-800 dark:text-white text-xs font-medium">Sin stock</span>
+            {% elif item.is_low_stock %}
+              <span class="text-gray-800 dark:text-white text-xs font-medium">Stock bajo</span>
+            {% else %}
+              <span class="text-gray-800 dark:text-white text-xs font-medium">OK</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <div class="flex items-center justify-center gap-3">
+              <a href="{% url 'products:detail' item.product.pk %}"
+                 class="text-indigo-500 hover:text-indigo-300 transition-colors" title="Ver producto">
+                <i class="fa-solid fa-eye text-base"></i>
+              </a>
+              <a href="{% url 'inventory:stock_edit' item.pk %}"
+                 class="text-amber-500 hover:text-amber-300 transition-colors" title="Editar ubicación">
+                <i class="fa-solid fa-pen text-base"></i>
+              </a>
+              <button @click="deletePk = {{ item.pk }}; deleteName = '{{ item.product.name|escapejs }}'; showDelete = true"
+                      class="text-indigo-400 hover:text-red-400 transition-colors" title="Eliminar">
+                <i class="fa-solid fa-trash text-base"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <div class="flex items-center justify-between px-5 py-4 border-t border-gray-100 dark:border-gray-700">
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Mostrando {{ page.start_index }}–{{ page.end_index }} de {{ page.paginator.count }} items
+    </p>
+    <div class="flex gap-1">
+      {% if page.has_previous %}
+      <a href="?page={{ page.previous_page_number }}&q={{ query }}&warehouse={{ selected_warehouse }}"
+         class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">Anterior</a>
+      {% endif %}
+      {% if page.has_next %}
+      <a href="?page={{ page.next_page_number }}&q={{ query }}&warehouse={{ selected_warehouse }}"
+         class="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300">Siguiente</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-gray-400">
+    <i class="fa-solid fa-warehouse text-5xl mb-4"></i>
+    <p class="text-lg font-medium text-gray-600 mb-1">Sin datos de stock</p>
+    <p class="text-sm">Registra un movimiento de entrada para comenzar.</p>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

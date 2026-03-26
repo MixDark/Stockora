@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Registro de Auditoría{% endblock %}
+{% block page_title %}Registro de auditoría{% endblock %}
+
+{% block header_action %}
+<a href="{% url 'accounts:audit_log_export' %}" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+  <i class="fa-solid fa-file-arrow-down"></i> Exportar
+</a>
+{% endblock header_action %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+        <tr>
+      <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Fecha</th>
+          <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Usuario</th>
+          <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Acción</th>
+          <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Modelo</th>
+          <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden md:table-cell">IP</th>
+          <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Cambios</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for log in logs %}
+        <tr class="hover:bg-gray-50 transition-colors">
+          <td class="px-3 sm:px-5 py-3 text-xs text-gray-500 whitespace-nowrap">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+          <td class="px-3 sm:px-5 py-3 font-medium text-gray-800">{{ log.user.username|default:"Sistema" }}</td>
+          <td class="px-3 sm:px-5 py-3">
+            {% if log.action == 'create' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Crear</span>
+            {% elif log.action == 'update' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Editar</span>
+            {% elif log.action == 'delete' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Eliminar</span>
+            {% elif log.action == 'login' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Login</span>
+            {% elif log.action == 'logout' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Logout</span>
+            {% elif log.action == 'export' %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Exportar</span>
+            {% else %}<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">{{ log.action }}</span>
+            {% endif %}
+          </td>
+          <td class="px-3 sm:px-5 py-3 font-mono text-xs text-gray-500">{{ log.model_name }}</td>
+          <td class="px-3 sm:px-5 py-3 font-mono text-xs text-gray-400 hidden md:table-cell">{{ log.ip_address|default:"—" }}</td>
+          <td class="px-3 sm:px-5 py-3 text-xs text-gray-400 max-w-xs truncate">{{ log.changes|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center py-12 text-gray-400">No hay registros de auditoría.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if logs.has_other_pages %}
+  <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+    <span>Página {{ logs.number }} de {{ logs.paginator.num_pages }}</span>
+    <div class="flex gap-1">
+      {% if logs.has_previous %}<a href="?page={{ logs.previous_page_number }}" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">‹</a>{% endif %}
+      {% if logs.has_next %}<a href="?page={{ logs.next_page_number }}" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

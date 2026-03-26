@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}OC-{{ order.order_number }}{% endblock %}
+{% block page_title %}Orden de compra OC-{{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Información de la orden</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Proveedor</span><a href="{% url 'suppliers:detail' order.supplier.pk %}" class="font-medium text-indigo-600 dark:text-indigo-400">{{ order.supplier.name }}</a></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Estado</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium text-gray-800 dark:text-white">{{ order.get_status_display }}</span>
+        </div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Fecha esperada</span><span class="text-gray-800 dark:text-white">{{ order.expected_date|date:"d/m/Y"|default:'—' }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Creada</span><span class="text-xs text-gray-500 dark:text-gray-400">{{ order.created_at|date:"d/m/Y H:i" }}</span></div>
+        {% if order.notes %}<div class="pt-2 border-t border-gray-100 dark:border-gray-700"><p class="text-gray-500 dark:text-gray-400 text-xs">{{ order.notes }}</p></div>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="xl:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700"><h3 class="font-semibold text-gray-800 dark:text-white">Ítems de la orden</h3></div>
+      <div class="overflow-x-auto rounded-b-xl">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+            <th class="px-5 py-3">Producto</th><th class="px-5 py-3 text-right">Cant. pedida</th>
+            <th class="px-5 py-3 text-right">Cant. recibida</th><th class="px-5 py-3 text-right">Costo unit.</th><th class="px-5 py-3 text-right">Subtotal</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for item in items %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+              <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+              <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{{ item.quantity_ordered|intcomma }}</td>
+              <td class="px-5 py-3 text-right {% if item.quantity_received < item.quantity_ordered %}text-amber-600 dark:text-amber-400{% else %}text-gray-700 dark:text-gray-300{% endif %}">{{ item.quantity_received|intcomma }}</td>
+              <td class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">${{ item.unit_cost|peso }}</td>
+              <td class="px-5 py-3 text-right font-medium text-gray-800 dark:text-white">${{ item.subtotal|peso }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50">
+              <td colspan="4" class="px-5 py-3 text-right font-semibold text-gray-800 dark:text-white">Total:</td>
+              <td class="px-5 py-3 text-right font-bold text-indigo-600 dark:text-indigo-400 text-base">${{ order.total|peso }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

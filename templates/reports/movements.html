@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Reporte de movimientos{% endblock %}
+{% block title_prefix %}<a href="{% url 'reports:home' %}" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors" title="Volver a reportes"><i class="fa-solid fa-arrow-left"></i></a>{% endblock %}
+{% block page_title %}Reporte de movimientos{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Filtros -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-32">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Desde</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <div class="flex-1 min-w-32">
+        <label class="block text-xs font-medium text-gray-600 mb-1">Hasta</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+        <select name="movement_type" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+          <option value="" {% if not selected_type %}selected{% endif %}>Todos</option>
+          <option value="in" {% if selected_type == 'in' %}selected{% endif %}>Entrada</option>
+          <option value="out" {% if selected_type == 'out' %}selected{% endif %}>Salida</option>
+          <option value="transfer" {% if selected_type == 'transfer' %}selected{% endif %}>Traslado</option>
+          <option value="adjustment" {% if selected_type == 'adjustment' %}selected{% endif %}>Ajuste</option>
+          <option value="return" {% if selected_type == 'return' %}selected{% endif %}>Devolución</option>
+        </select>
+      </div>
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><i class="fa-solid fa-filter"></i> Filtrar</button>
+      <a href="?export=excel&date_from={{ date_from }}&date_to={{ date_to }}{% if selected_type %}&movement_type={{ selected_type }}{% endif %}" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-file-excel"></i> Excel
+      </a>
+    </form>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+          <tr>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Fecha</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Tipo</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Producto</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden md:table-cell">Alm. origen</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden md:table-cell">Alm. destino</th>
+            <th class="px-3 sm:px-5 py-3 text-right font-medium whitespace-nowrap">Cantidad</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden lg:table-cell">Referencia</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden lg:table-cell">Realizado por</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for mv in movements %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-3 sm:px-5 py-3 text-gray-500 text-xs whitespace-nowrap">{{ mv.created_at|date:"d/m/Y H:i" }}</td>
+            <td class="px-3 sm:px-5 py-3">
+              {% if mv.movement_type == 'in' %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Entrada</span>
+              {% elif mv.movement_type == 'out' %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Salida</span>
+              {% elif mv.movement_type == 'transfer' %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Traslado</span>
+              {% elif mv.movement_type == 'adjustment' %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Ajuste</span>
+              {% else %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">{{ mv.get_movement_type_display }}</span>
+              {% endif %}
+            </td>
+            <td class="px-3 sm:px-5 py-3 font-medium text-gray-800">{{ mv.product.name }}</td>
+            <td class="px-3 sm:px-5 py-3 text-gray-500 hidden md:table-cell">{{ mv.from_warehouse.name|default:"—" }}</td>
+            <td class="px-3 sm:px-5 py-3 text-gray-500 hidden md:table-cell">{{ mv.to_warehouse.name|default:"—" }}</td>
+            <td class="px-3 sm:px-5 py-3 text-right font-mono font-bold {% if mv.movement_type == 'in' %}text-gray-800{% elif mv.movement_type == 'out' %}text-red-600{% else %}text-gray-700{% endif %}">
+              {% if mv.movement_type == 'in' %}+{% elif mv.movement_type == 'out' %}−{% endif %}{{ mv.quantity }}
+            </td>
+            <td class="px-3 sm:px-5 py-3 text-xs text-gray-400 hidden lg:table-cell">{{ mv.reference|default:"—" }}</td>
+            <td class="px-3 sm:px-5 py-3 text-gray-500 text-xs hidden lg:table-cell">{{ mv.performed_by.get_full_name|default:mv.performed_by.username|default:"Sistema" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="8" class="text-center py-10 text-gray-400">No hay movimientos en el período seleccionado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

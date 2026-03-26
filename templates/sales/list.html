@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Ventas{% endblock %}
+{% block page_title %}Ventas{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row gap-3 mb-6">
+  <form method="GET" class="flex-1 flex flex-wrap gap-2">
+    <div class="relative flex-1 min-w-48">
+      <span class="absolute inset-y-0 left-3 flex items-center text-gray-400"><i class="fa-solid fa-search text-sm"></i></span>
+      <input type="text" name="q" value="{{ query }}" placeholder="Nº factura o cliente"
+             class="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+    </div>
+    <select name="status" class="border border-gray-300 rounded-lg text-sm px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+      <option value="">Todos</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+      <i class="fa-solid fa-filter"></i> Filtrar
+    </button>
+    <a href="{% url 'sales:pos' %}"
+       class="w-auto inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-cash-register"></i> Nueva
+    </a>
+  </form>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  {% if page.object_list %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+        <th class="px-5 py-3">Nº Factura</th><th class="px-5 py-3">Cliente</th><th class="px-5 py-3">Almacén</th>
+        <th class="px-5 py-3">Estado</th><th class="px-5 py-3">Pago</th><th class="px-5 py-3">Vendido por</th><th class="px-5 py-3">Fecha</th>
+      </tr></thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for s in page.object_list %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-5 py-3"><a href="{% url 'sales:detail' s.pk %}" class="font-medium text-indigo-600 hover:text-indigo-800">#{{ s.invoice_number }}</a></td>
+          <td class="px-5 py-3 text-gray-800">{{ s.customer.name|default:'Consumidor final' }}</td>
+          <td class="px-5 py-3 text-gray-500 text-xs">{{ s.warehouse.name }}</td>
+          <td class="px-5 py-3">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium
+              {% if s.status == 'completed' %}text-black dark:text-white
+              {% elif s.status == 'cancelled' %}text-black dark:text-white
+              {% else %}text-black dark:text-white{% endif %}">
+              {{ s.get_status_display }}
+            </span>
+          </td>
+          <td class="px-5 py-3 text-gray-500 text-xs">{{ s.get_payment_method_display }}</td>
+          <td class="px-5 py-3 text-gray-400 text-xs">{{ s.sold_by.username|default:'—' }}</td>
+          <td class="px-5 py-3 text-gray-400 text-xs">{{ s.created_at|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-gray-400">
+    <i class="fa-solid fa-receipt text-5xl mb-4"></i>
+    <p class="text-lg font-medium text-gray-600 mb-1">Sin ventas registradas</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

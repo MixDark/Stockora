@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Reporte de inventario{% endblock %}
+{% block title_prefix %}<a href="{% url 'reports:home' %}" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors" title="Volver a reportes"><i class="fa-solid fa-arrow-left"></i></a>{% endblock %}
+{% block page_title %}Reporte de inventario{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Resumen y exportación -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <p class="text-xs text-gray-500 uppercase font-medium mb-1">Total productos</p>
+      <p class="text-3xl font-bold text-gray-800">{{ total_products }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+      <p class="text-xs text-gray-500 uppercase font-medium mb-1">Valor total inventario</p>
+      <p class="text-3xl font-bold text-indigo-600">${{ total_value|peso }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 flex flex-col justify-end gap-2">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">Exportar como</p>
+      <div class="flex gap-2 flex-wrap">
+        <a href="?export=excel{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          <i class="fa-solid fa-file-excel"></i> Excel
+        </a>
+        <a href="?export=pdf{% if selected_warehouse %}&warehouse={{ selected_warehouse }}{% endif %}" class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          <i class="fa-solid fa-file-pdf"></i> PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de stock valorado -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="p-5 border-b border-gray-100">
+      <h3 class="font-semibold text-gray-800">Valoración de stock por producto</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+          <tr>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">SKU</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Producto</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap hidden sm:table-cell">Categoría</th>
+            <th class="px-3 sm:px-5 py-3 text-right font-medium whitespace-nowrap">Stock</th>
+            <th class="px-3 sm:px-5 py-3 text-right font-medium whitespace-nowrap hidden md:table-cell">Costo unit.</th>
+            <th class="px-3 sm:px-5 py-3 text-right font-medium whitespace-nowrap">Valor total</th>
+            <th class="px-3 sm:px-5 py-3 text-left font-medium whitespace-nowrap">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for item in stock_items %}
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-3 sm:px-5 py-3 font-mono text-xs text-gray-500">{{ item.product.sku }}</td>
+            <td class="px-3 sm:px-5 py-3 font-medium text-gray-800">{{ item.product.name }}</td>
+            <td class="px-3 sm:px-5 py-3 text-gray-500 hidden sm:table-cell">{{ item.product.category.name|default:"—" }}</td>
+            <td class="px-3 sm:px-5 py-3 text-right font-medium text-gray-800 dark:text-white">{{ item.quantity }}</td>
+            <td class="px-3 sm:px-5 py-3 text-right text-gray-500 hidden md:table-cell">${{ item.product.cost_price|peso }}</td>
+            <td class="px-3 sm:px-5 py-3 text-right font-bold text-indigo-600">${{ item.value|peso }}</td>
+            <td class="px-3 sm:px-5 py-3">
+              {% if item.quantity == 0 %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Sin stock</span>
+              {% elif item.is_low_stock %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Stock bajo</span>
+              {% else %}
+              <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">OK</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center py-10 text-gray-400">No hay datos de inventario.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

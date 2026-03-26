@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Reporte de ventas{% endblock %}
+{% block title_prefix %}<a href="{% url 'reports:home' %}" class="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors" title="Volver a reportes"><i class="fa-solid fa-arrow-left"></i></a>{% endblock %}
+{% block page_title %}Reporte de ventas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Filtro por fechas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+    <form method="get" class="flex flex-wrap gap-3 items-end">
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Desde</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Hasta</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+      </div>
+      <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+        <i class="fa-solid fa-filter"></i> Filtrar
+      </button>
+      <a href="?export=excel&date_from={{ date_from }}&date_to={{ date_to }}" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-file-excel"></i> Excel
+      </a>
+    </form>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium mb-1">Ventas totales</p>
+      <p class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_sales }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium mb-1">Facturación</p>
+      <p class="text-3xl font-bold text-gray-800 dark:text-white">${{ total_revenue|peso }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium mb-1">Ticket promedio</p>
+      <p class="text-3xl font-bold text-indigo-500">${{ avg_ticket|peso }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium mb-1">Devoluciones</p>
+      <p class="text-3xl font-bold text-gray-800 dark:text-white">{{ total_returns }}</p>
+    </div>
+  </div>
+
+  <!-- Tabla de ventas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+    <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-800 dark:text-white">Detalle de ventas</h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+          <tr>
+            <th class="px-5 py-3 text-left font-medium">Factura</th>
+            <th class="px-5 py-3 text-left font-medium">Fecha</th>
+            <th class="px-5 py-3 text-left font-medium">Cliente</th>
+            <th class="px-5 py-3 text-left font-medium">Pago</th>
+            <th class="px-5 py-3 text-right font-medium">Total</th>
+            <th class="px-5 py-3 text-left font-medium">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for sale in sales %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+            <td class="px-5 py-3 font-mono text-xs">
+              <a href="{% url 'sales:detail' sale.pk %}" class="text-indigo-500 hover:underline">#{{ sale.invoice_number }}</a>
+            </td>
+            <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ sale.created_at|date:"d/m/Y" }}</td>
+            <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ sale.customer.name|default:"Consumidor final" }}</td>
+            <td class="px-5 py-3 text-gray-500 dark:text-gray-400 capitalize">{{ sale.get_payment_method_display }}</td>
+            <td class="px-5 py-3 text-right font-medium text-gray-800 dark:text-white">${{ sale.total|peso }}</td>
+            <td class="px-5 py-3 text-gray-800 dark:text-white text-xs font-medium">{{ sale.get_status_display }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center py-10 text-gray-400">No hay ventas en el período seleccionado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

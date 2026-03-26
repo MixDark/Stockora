@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Devoluciones{% endblock %}
+{% block page_title %}Devoluciones{% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-xs uppercase">
+        <tr>
+          <th class="px-5 py-3 text-left font-medium">#</th>
+          <th class="px-5 py-3 text-left font-medium">Venta original</th>
+          <th class="px-5 py-3 text-left font-medium">Fecha</th>
+          <th class="px-5 py-3 text-left font-medium">Motivo</th>
+          <th class="px-5 py-3 text-left font-medium">Reingresa stock</th>
+          <th class="px-5 py-3 text-right font-medium">Total devuelto</th>
+          <th class="px-5 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+        {% for r in returns %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
+          <td class="px-5 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">DEV-{{ r.pk|stringformat:"05d" }}</td>
+          <td class="px-5 py-3">
+            <a href="{% url 'sales:detail' r.sale.pk %}" class="text-indigo-600 hover:underline">#{{ r.sale.invoice_number }}</a>
+          </td>
+          <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ r.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-5 py-3 text-gray-600 dark:text-gray-300 max-w-xs truncate">{{ r.reason|default:"—" }}</td>
+          <td class="px-5 py-3">
+            {% if r.restock %}
+            <span class="inline-flex items-center gap-1 text-xs text-black dark:text-white font-medium"><i class="fa-solid fa-check-circle text-green-500"></i> Sí</span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 text-xs text-gray-400"><i class="fa-solid fa-times-circle"></i> No</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-right font-medium text-red-500">-${{ r.total|peso }}</td>
+          <td class="px-5 py-3 text-right">
+            <a href="{% url 'sales:return_detail' r.pk %}"
+               class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-400 transition-colors"
+               title="Ver devolución">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-12 text-gray-400">
+            <i class="fa-solid fa-rotate-left text-3xl mb-3 block"></i>
+            No hay devoluciones registradas.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-center gap-2">
+    {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-white">Anterior</a>{% endif %}
+    <span class="px-3 py-1 text-sm text-gray-500 dark:text-gray-400">Pág. {{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a href="?page={{ page.next_page_number }}" class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-white">Siguiente</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+

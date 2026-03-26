@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Notificaciones{% endblock %}
+{% block page_title %}Notificaciones{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl space-y-3">
+  {% for notification in notifications %}
+  <div class="bg-white rounded-xl shadow-sm border {% if not notification.is_read %}border-indigo-200 bg-indigo-50{% else %}border-gray-100{% endif %} p-4 flex items-start gap-4">
+    <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+      {% if notification.type == 'danger' %}bg-red-100 text-red-600
+      {% elif notification.type == 'warning' %}bg-gray-100 text-gray-600
+      {% elif notification.type == 'success' %}bg-gray-100 text-gray-600
+      {% else %}bg-gray-100 text-gray-600{% endif %}">
+      {% if notification.type == 'danger' %}<i class="fa-solid fa-circle-exclamation"></i>
+      {% elif notification.type == 'warning' %}<i class="fa-solid fa-triangle-exclamation"></i>
+      {% elif notification.type == 'success' %}<i class="fa-solid fa-circle-check"></i>
+      {% else %}<i class="fa-solid fa-circle-info"></i>{% endif %}
+    </div>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-semibold text-gray-800">{{ notification.title }}</p>
+      <p class="text-sm text-gray-600 mt-0.5">{{ notification.message }}</p>
+      <p class="text-xs text-gray-400 mt-1">{{ notification.created_at|timesince }} atrás</p>
+    </div>
+    {% if not notification.is_read %}
+    <a href="{% url 'notifications:mark_read' notification.pk %}"
+       class="flex-shrink-0 text-xs text-indigo-600 hover:underline whitespace-nowrap">Marcar leída</a>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
+    <i class="fa-solid fa-bell-slash text-4xl mb-3 block"></i>
+    <p class="font-medium">No tienes notificaciones</p>
+    <p class="text-sm mt-1">Todo está al día.</p>
+  </div>
+  {% endfor %}
+
+  {% if notifications.has_other_pages %}
+  <div class="flex gap-1 justify-center pt-4">
+    {% if notifications.has_previous %}
+    <a href="?page={{ notifications.previous_page_number }}" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">‹ Anterior</a>
+    {% endif %}
+    {% if notifications.has_next %}
+    <a href="?page={{ notifications.next_page_number }}" class="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Siguiente ›</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

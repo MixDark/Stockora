@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+
+{% block title %}Venta #{{ sale.invoice_number }}{% endblock %}
+{% block page_title %}Venta #{{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Detalle de la venta</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Cliente</span><span class="font-medium text-gray-800 dark:text-white">{{ sale.customer.name|default:'Consumidor final' }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Almacén</span><span class="text-gray-800 dark:text-white">{{ sale.warehouse.name }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Estado</span>
+          <span class="text-xs px-2 py-0.5 rounded-full font-medium text-gray-800 dark:text-white">{{ sale.get_status_display }}</span>
+        </div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Método de pago</span><span class="text-gray-800 dark:text-white">{{ sale.get_payment_method_display }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Vendido por</span><span class="text-xs text-gray-500 dark:text-gray-400">{{ sale.sold_by.get_full_name|default:sale.sold_by.username|default:'—' }}</span></div>
+        <div class="flex justify-between"><span class="text-gray-500 dark:text-gray-400">Fecha</span><span class="text-xs text-gray-500 dark:text-gray-400">{{ sale.created_at|date:"d/m/Y H:i" }}</span></div>
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-3 space-y-1">
+          <div class="flex justify-between text-gray-500 dark:text-gray-400"><span>Subtotal</span><span>${{ sale.subtotal|peso }}</span></div>
+          <div class="flex justify-between text-gray-500 dark:text-gray-400"><span>IVA</span><span>${{ sale.tax_total|peso }}</span></div>
+          {% if sale.discount > 0 %}<div class="flex justify-between text-red-500"><span>Descuento</span><span>-${{ sale.discount|peso }}</span></div>{% endif %}
+          <div class="flex justify-between font-bold text-gray-800 dark:text-white text-base pt-1 border-t border-gray-100 dark:border-gray-700"><span>Total</span><span class="text-indigo-500">${{ sale.total|peso }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    {% if sale.status == 'completed' %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mt-4 flex justify-center">
+      <a href="{% url 'sales:return_create' sale.pk %}"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-rotate-left"></i> Registrar devolución
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  <div class="lg:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700"><h3 class="font-semibold text-gray-800 dark:text-white">Productos vendidos</h3></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead><tr class="text-left text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700">
+            <th class="px-3 sm:px-5 py-3 whitespace-nowrap">Producto</th><th class="px-3 sm:px-5 py-3 text-right whitespace-nowrap">Cantidad</th>
+            <th class="px-3 sm:px-5 py-3 text-right whitespace-nowrap">Precio unit.</th><th class="px-3 sm:px-5 py-3 text-right whitespace-nowrap hidden sm:table-cell">IVA</th><th class="px-3 sm:px-5 py-3 text-right whitespace-nowrap">Subtotal</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for item in items %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-3 sm:px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+              <td class="px-3 sm:px-5 py-3 text-right text-gray-700 dark:text-gray-300">{{ item.quantity }}</td>
+              <td class="px-3 sm:px-5 py-3 text-right text-gray-600 dark:text-gray-300">${{ item.unit_price|peso }}</td>
+              <td class="px-3 sm:px-5 py-3 text-right text-gray-400 dark:text-gray-500 hidden sm:table-cell">{{ item.tax_rate }}%</td>
+              <td class="px-3 sm:px-5 py-3 text-right font-medium text-gray-800 dark:text-white">${{ item.subtotal|peso }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

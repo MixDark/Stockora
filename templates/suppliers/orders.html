@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Órdenes de compra{% endblock %}
+{% block page_title %}Órdenes de compra{% endblock %}
+
+{% block header_action %}
+<a href="{% url 'suppliers:order_create' %}" class="sm:w-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+  <i class="fa-solid fa-plus"></i> Nuevo
+</a>
+{% endblock %}
+
+{% block content %}
+<div x-data="{
+  showEdit: false,
+  showDelete: false,
+  editPk: null,
+  editNumber: '',
+  editExpected: '',
+  editNotes: '',
+  editStatus: '',
+  deletePk: null,
+  deleteNumber: '',
+  openEdit(pk, number, expected, notes, status) {
+    this.editPk = pk; this.editNumber = number; this.editExpected = expected;
+    this.editNotes = notes; this.editStatus = status; this.showEdit = true;
+  }
+}">
+
+<!-- Modal editar orden -->
+<div x-show="showEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="showEdit = false">
+  <div class="absolute inset-0 bg-black/50" @click="showEdit = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 z-10">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-lg font-semibold text-gray-800 dark:text-white flex-1 text-center">Editar orden</h3>
+      <button @click="showEdit = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+    <form method="POST" :action="`/proveedores/ordenes/${editPk}/editar/`" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Estado</label>
+        <select name="status" :value="editStatus"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+          {% for value, label in statuses %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Fecha esperada</label>
+        <input type="date" name="expected_date" :value="editExpected"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Notas</label>
+        <textarea name="notes" rows="3" x-text="editNotes"
+          class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-white dark:bg-gray-700 text-gray-800 dark:text-white"></textarea>
+      </div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button type="button" @click="showEdit = false"
+          class="btn-cancel px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </button>
+        <button type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal confirmar eliminación -->
+<div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/50" @click="showDelete = false"></div>
+  <div class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
+    <div class="flex justify-center mb-4">
+      <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <i class="fa-solid fa-trash text-red-600 dark:text-red-400 text-lg"></i>
+      </div>
+    </div>
+    <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-1 text-center">Eliminar orden</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+      ¿Estás seguro de eliminar la orden
+      <span class="font-semibold text-gray-800 dark:text-white" x-text="deleteNumber"></span>?
+      Esta acción no se puede deshacer.
+    </p>
+    <form method="POST" :action="`/proveedores/ordenes/${deletePk}/eliminar/`">
+      {% csrf_token %}
+      <div class="flex gap-3 justify-center">
+        <button type="button" @click="showDelete = false"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-xmark mr-1"></i>Cancelar
+        </button>
+        <button type="submit"
+          class="px-5 py-2 rounded-lg text-sm font-medium btn-cancel transition-colors">
+          <i class="fa-solid fa-trash mr-1"></i>Eliminar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="flex flex-wrap gap-3 mb-6">
+  <form method="GET" class="flex flex-wrap gap-2">
+    <select name="status" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none bg-white w-full sm:w-auto">
+      <option value="">Todos los estados</option>
+      {% for value, label in statuses %}<option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"><i class="fa-solid fa-filter"></i> Filtrar</button>
+  </form>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  {% if page.object_list %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-100">
+        <th class="px-3 sm:px-5 py-3 whitespace-nowrap">Nº Orden</th><th class="px-3 sm:px-5 py-3 whitespace-nowrap">Proveedor</th><th class="px-3 sm:px-5 py-3 whitespace-nowrap">Estado</th>
+        <th class="px-3 sm:px-5 py-3 whitespace-nowrap hidden sm:table-cell">Fecha esperada</th><th class="px-3 sm:px-5 py-3 whitespace-nowrap hidden md:table-cell">Generada</th><th class="px-3 sm:px-5 py-3 whitespace-nowrap hidden md:table-cell">Creada por</th>
+        <th class="px-3 sm:px-5 py-3 whitespace-nowrap">Acciones</th>
+      <tbody class="divide-y divide-gray-50">
+        {% for o in page.object_list %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-3 sm:px-5 py-3"><a href="{% url 'suppliers:order_detail' o.pk %}" class="font-medium text-indigo-600 hover:text-indigo-800">OC-{{ o.order_number }}</a></td>
+          <td class="px-3 sm:px-5 py-3"><a href="{% url 'suppliers:detail' o.supplier.pk %}" class="text-gray-800 hover:text-indigo-600">{{ o.supplier.name }}</a></td>
+          <td class="px-3 sm:px-5 py-3">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium
+              {% if o.status == 'received' %}text-black dark:text-white
+              {% elif o.status == 'cancelled' %}text-black dark:text-white
+              {% elif o.status == 'sent' %}text-black dark:text-white
+              {% else %}text-black dark:text-white{% endif %}">
+              {{ o.get_status_display }}
+            </span>
+          </td>
+          <td class="px-3 sm:px-5 py-3 text-gray-500 text-xs hidden sm:table-cell">{{ o.expected_date|date:"d/m/Y"|default:'—' }}</td>
+          <td class="px-3 sm:px-5 py-3 text-center text-xs hidden md:table-cell">{% if o.is_auto_generated %}<span class="text-indigo-600 font-medium">Auto</span>{% else %}—{% endif %}</td>
+          <td class="px-3 sm:px-5 py-3 text-gray-400 text-xs hidden md:table-cell">{{ o.created_by.username|default:'—' }}</td>
+          <td class="px-3 sm:px-5 py-3">
+            <div class="flex items-center gap-1">
+              <a href="{% url 'suppliers:order_detail' o.pk %}"
+                 class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-400 transition-colors"
+                 title="Ver orden">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <button @click="openEdit({{ o.pk }}, 'OC-{{ o.order_number }}', '{{ o.expected_date|date:'Y-m-d'|default:'' }}', '{{ o.notes|default:''|escapejs }}', '{{ o.status }}')"
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/40 transition-colors"
+                title="Editar orden">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button @click="deletePk = {{ o.pk }}; deleteNumber = 'OC-{{ o.order_number }}'; showDelete = true"
+                class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                title="Eliminar orden">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-16 text-gray-400">
+    <i class="fa-solid fa-file-invoice text-5xl mb-4"></i>
+    <p class="text-lg font-medium text-gray-600 mb-1">Sin órdenes de compra</p>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

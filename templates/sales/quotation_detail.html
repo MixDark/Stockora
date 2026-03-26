@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load humanize stockora_filters %}
+{% block title %}Cotización {{ quotation.quotation_number }}{% endblock %}
+{% block page_title %}Cotización {{ quotation.quotation_number }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+  <!-- Panel izquierdo: datos + acciones -->
+  <div class="space-y-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+      <h3 class="font-semibold text-gray-800 dark:text-white mb-4">Detalle</h3>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Cliente</span>
+          <span class="font-medium text-gray-800 dark:text-white">{{ quotation.customer.name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Creada</span>
+          <span class="text-gray-600 dark:text-gray-300">{{ quotation.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Válida hasta</span>
+          <span class="text-gray-600 dark:text-gray-300">{{ quotation.valid_until|date:"d/m/Y"|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-500 dark:text-gray-400">Creada por</span>
+          <span class="text-gray-600 dark:text-gray-300 text-xs">{{ quotation.created_by.get_full_name|default:quotation.created_by.username|default:"—" }}</span>
+        </div>
+        <div class="flex justify-between items-center pt-1">
+          <span class="text-gray-500 dark:text-gray-400">Estado</span>
+          {% if quotation.status == 'accepted' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Aceptada</span>
+          {% elif quotation.status == 'rejected' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Rechazada</span>
+          {% elif quotation.status == 'sent' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Enviada</span>
+          {% elif quotation.status == 'expired' %}<span class="px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Vencida</span>
+          {% else %}<span class="px-2 py-0.5 rounded-full text-xs font-medium text-black dark:text-white">Borrador</span>{% endif %}
+        </div>
+        <div class="border-t border-gray-100 dark:border-gray-700 pt-3 flex justify-between font-bold text-gray-800 dark:text-white">
+          <span>Total</span>
+          <span class="text-indigo-500">${{ quotation.total|peso }}</span>
+        </div>
+        {% if quotation.notes %}
+        <div class="pt-1 text-xs text-gray-500 dark:text-gray-400 italic">{{ quotation.notes }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Acciones de estado -->
+    {% if quotation.status == 'draft' %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Cambiar estado</p>
+      <form method="post" action="{% url 'sales:quotation_change_status' quotation.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="sent">
+        <button class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+          <i class="fa-solid fa-paper-plane mr-1"></i> Marcar como enviada
+        </button>
+      </form>
+    </div>
+    {% elif quotation.status == 'sent' %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Cambiar estado</p>
+      <div class="flex gap-2">
+        <form method="post" action="{% url 'sales:quotation_change_status' quotation.pk %}" class="flex-1">
+          {% csrf_token %}<input type="hidden" name="status" value="accepted">
+          <button class="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+            <i class="fa-solid fa-check mr-1"></i> Aceptar
+          </button>
+        </form>
+        <form method="post" action="{% url 'sales:quotation_change_status' quotation.pk %}" class="flex-1">
+          {% csrf_token %}<input type="hidden" name="status" value="rejected">
+          <button class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">
+            <i class="fa-solid fa-times mr-1"></i> Rechazar
+          </button>
+        </form>
+      </div>
+    </div>
+    {% elif quotation.status == 'accepted' %}
+    <!-- Convertir a venta -->
+    <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      <button @click="open = true" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+        <i class="fa-solid fa-bolt mr-1"></i> Convertir a venta
+      </button>
+      <div x-show="open" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4" @click.outside="open = false">
+          <h4 class="font-semibold text-gray-800 dark:text-white mb-4">Convertir cotización en venta</h4>
+          <form method="post" action="{% url 'sales:quotation_convert' quotation.pk %}">
+            {% csrf_token %}
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Almacén <span class="text-red-500">*</span></label>
+                <select name="warehouse" required class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                  {% for w in warehouses %}<option value="{{ w.pk }}">{{ w.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Método de pago</label>
+                <select name="payment_method" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-white">
+                  {% for v, l in payment_methods %}<option value="{{ v }}">{{ l }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="flex gap-2 pt-2">
+                <button type="button" @click="open = false" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"><i class="fa-solid fa-times mr-1"></i>Cancelar</button>
+                <button type="submit" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"><i class="fa-solid fa-bolt mr-1"></i>Generar</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'sales:quotations' %}" class="block text-center text-sm text-indigo-600 hover:underline">
+      <i class="fa-solid fa-arrow-left mr-1"></i> Volver al listado
+    </a>
+  </div>
+
+  <!-- Panel derecho: ítems -->
+  <div class="xl:col-span-2">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      <div class="p-5 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-semibold text-gray-800 dark:text-white">Productos cotizados</h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <th class="px-5 py-3 text-left">Producto</th>
+              <th class="px-5 py-3 text-right">Cantidad</th>
+              <th class="px-5 py-3 text-right">Precio unit.</th>
+              <th class="px-5 py-3 text-right">Descuento</th>
+              <th class="px-5 py-3 text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50 dark:divide-gray-700">
+            {% for item in items %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40">
+              <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ item.product.name }}</td>
+              <td class="px-5 py-3 text-right text-gray-700 dark:text-gray-300">{{ item.quantity }}</td>
+              <td class="px-5 py-3 text-right text-gray-600 dark:text-gray-300">${{ item.unit_price|peso }}</td>
+              <td class="px-5 py-3 text-right text-gray-400 dark:text-gray-500">${{ item.discount|peso }}</td>
+              <td class="px-5 py-3 text-right font-medium text-gray-800 dark:text-white">${{ item.subtotal|peso }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-gray-200 dark:border-gray-600">
+              <td colspan="4" class="px-5 py-3 text-right font-bold text-gray-700 dark:text-gray-300">Total</td>
+              <td class="px-5 py-3 text-right font-bold text-indigo-600 dark:text-indigo-400">${{ quotation.total|peso }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

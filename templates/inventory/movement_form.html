@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo movimiento{% endblock %}
+{% block page_title %}Registrar movimiento de stock{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <form method="POST" class="space-y-5">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de movimiento *</label>
+          <select name="movement_type" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            {% for value, label in movement_types %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Producto *</label>
+          <select name="product" required
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            <option value="">Seleccionar producto...</option>
+            {% for p in products %}
+            <option value="{{ p.pk }}" {% if selected_product_id == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name }} ({{ p.sku }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Almacén origen</label>
+          <select name="from_warehouse"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            <option value="">— Ninguno —</option>
+            {% for w in warehouses %}
+            <option value="{{ w.pk }}" {% if selected_warehouse_id == w.pk|stringformat:'s' %}selected{% endif %}>{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Almacén destino</label>
+          <select name="to_warehouse"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            <option value="">— Ninguno —</option>
+            {% for w in warehouses %}
+            <option value="{{ w.pk }}">{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad *</label>
+          <input type="number" name="quantity" min="1" required value="1"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Costo unitario</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 text-sm">$</span>
+            <input type="number" name="unit_cost" min="0" step="1" value="{% if selected_unit_cost %}{{ selected_unit_cost|floatformat:0 }}{% else %}0{% endif %}"
+                   class="w-full pl-7 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+          <input type="text" name="location" placeholder="Pasillo estante nivel"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
+          <input type="text" name="reference" placeholder="Nº factura orden de compra"
+                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+        <textarea name="notes" rows="3"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"></textarea>
+      </div>
+
+      <div class="flex justify-center gap-3 pt-2">
+        <a href="{% url 'inventory:stock' %}"
+           class="px-8 text-center py-2.5 rounded-lg text-sm font-medium btn-cancel transition-colors flex items-center justify-center gap-2">
+          <i class="fa-solid fa-xmark"></i> Cancelar
+        </a>
+        <button type="submit"
+                class="sm:w-auto inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i> Registrar movimiento
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
