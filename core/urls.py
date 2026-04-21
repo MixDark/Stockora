@@ -18,9 +18,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
+from django.views.generic import RedirectView
 from accounts.views import password_reset_captcha
 
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.ico', permanent=False)),
     # Override password reset de allauth con captcha propio
     path('accounts/password/reset/', password_reset_captcha, name='account_reset_password'),
     path('accounts/', include('allauth.urls')),

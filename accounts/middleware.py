@@ -2,6 +2,19 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 
+class CleanLoginNextMiddleware:
+    """Normaliza la URL de login para evitar /accounts/login/?next=/ ."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        login_path = reverse('account_login')
+        if request.path == login_path and request.GET.get('next') == '/':
+            return redirect('account_login')
+        return self.get_response(request)
+
+
 class ForcePasswordChangeMiddleware:
     """Redirige al usuario a cambiar su contraseña si el admin la ha reseteado."""
 

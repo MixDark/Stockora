@@ -17,8 +17,10 @@ from .models import User, AuditLog
 from django.http import HttpResponse
 
 
-@login_required
 def dashboard(request):
+    if not request.user.is_authenticated:
+        return redirect('account_login')
+
     from products.models import Product, Category
     from inventory.models import StockItem, StockMovement, Warehouse
     from sales.models import Sale
