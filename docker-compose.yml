@@ -1,0 +1,162 @@
+version: "3.9"
+
+services:
+
+  # ============================================================
+  # POSTGRESQL
+  # ============================================================
+  postgres:
+    image: postgres:16-alpine
+
+    container_name: stockora-postgres
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Bogota
+
+    volumes:
+      - stockora_db:/var/lib/postgresql/data
+
+    networks:
+      - stockora
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+  # ============================================================
+  # STOCKORA
+  # ============================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: stockora_app
+
+    restart: unless-stopped
+
+    expose:
+      - "7000"
+
+    environment:
+
+      # --------------------------------------------------------
+      # DJANGO
+      # --------------------------------------------------------
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+
+      # --------------------------------------------------------
+      # POSTGRESQL
+      # --------------------------------------------------------
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      # --------------------------------------------------------
+      # SERVIDOR
+      # --------------------------------------------------------
+      APP_HOST: ${APP_HOST}
+      APP_PORT: ${APP_PORT}
+
+    volumes:
+      # Imágenes de productos y avatares
+      - stockora_media:/app/media
+
+      # Archivos recopilados por collectstatic
+      - stockora_static:/app/staticfiles
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      # Red de Nginx Proxy Manager
+      - proxy
+
+      # Red privada Stockora ↔ PostgreSQL
+      - stockora
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['APP_PORT'] + '/accounts/login/', timeout=5)\""
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+# ============================================================
+# NETWORKS
+# ============================================================
+
+networks:
+
+  # Red EXISTENTE de Nginx Proxy Manager
+  proxy:
+    external: true
+    name: nginx-proxy_default
+
+  # Red privada de Stockora y PostgreSQL
+  stockora:
+    driver: bridge
+
+
+# ============================================================
+# VOLUMES
+# ============================================================
+
+volumes:
+
+  # Base de datos PostgreSQL
+  stockora_db:
+    name: stockora_db
+
+  # Imágenes de productos y avatares
+  stockora_media:
+    name: stockora_media
+
+  # Archivos estáticos
+  stockora_static:
+    name: stockora_static

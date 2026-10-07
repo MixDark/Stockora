@@ -5,13 +5,15 @@ import sys
 import threading
 import webbrowser
 
+from decouple import config
+
 
 def main():
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
     if len(sys.argv) == 1:
-        host = '127.0.0.1'
-        port = 8000
+        host = config('APP_HOST', default='127.0.0.1')
+        port = config('APP_PORT', default=7000, cast=int)
         url = f'http://{host}:{port}/'
         try:
             from waitress import serve

@@ -103,6 +103,7 @@ Stockora/
 8. **Ejecuta el servidor:**
    - Desarrollo: `python manage.py runserver`
    - Producción: `python manage.py` (inicia Waitress en el puerto 7000 y abre el navegador automáticamente)
+     Puedes cambiar el puerto con `APP_PORT=8000` en las variables del stack.
 
 ---
 
@@ -146,6 +147,59 @@ DEFAULT_FROM_EMAIL=Stockora <noreply@stockora.com>
    ```
    Esto iniciará Waitress en el puerto 7000 y abrirá el navegador automáticamente.
 5. Asegúrate de tener configuradas las variables de entorno de producción (`DEBUG=False`, `ALLOWED_HOSTS`, etc).
+
+---
+
+## Despliegue con Docker y Portainer
+
+El archivo `docker-compose.yml` crea la aplicación Django y PostgreSQL en el
+mismo stack. Los datos de PostgreSQL, las imágenes subidas y los archivos
+estáticos se guardan en volúmenes Docker para que no se pierdan al actualizar
+los contenedores.
+
+En Portainer, crea un stack desde este repositorio Git o pega el contenido de
+`docker-compose.yml`. Si usas el repositorio, Portainer debe tener acceso al
+`Dockerfile` y al directorio `docker/`. Define estas variables en **Environment
+variables**:
+
+```text
+SECRET_KEY=una-clave-larga-y-aleatoria
+DB_NAME=stockora
+DB_USER=stockora
+DB_PASSWORD=una-clave-segura-de-postgresql
+TZ=America/Bogota
+APP_HOST=0.0.0.0
+APP_PORT=7000
+DEBUG=False
+ALLOWED_HOSTS=tu-dominio.com,localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=https://tu-dominio.com
+PROXY_NETWORK=nginx-proxy_default
+DB_VOLUME_NAME=stockora_postgres_prod
+MEDIA_VOLUME_NAME=stockora_media_prod
+STATIC_VOLUME_NAME=stockora_static_prod
+APP_CPU_LIMIT=1.0
+APP_MEMORY_LIMIT=1G
+APP_CPU_RESERVATION=0.2
+APP_MEMORY_RESERVATION=256M
+```
+
+Todas estas variables son obligatorias en Portainer; el stack no proporciona
+valores predeterminados para ellas.
+
+Si accedes directamente por IP y puerto, usa por ejemplo:
+
+```text
+ALLOWED_HOSTS=192.168.1.50,localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://192.168.1.50:7000
+```
+
+Después de desplegar, abre `http://IP_DEL_SERVIDOR:7000/`. El contenedor
+ejecuta automáticamente las migraciones y `collectstatic` antes de iniciar
+Waitress.
+
+Para cambiar el código, actualiza la imagen o vuelve a desplegar el stack.
+No elimines los volúmenes `stockora_db` y `stockora_media`: el primero contiene
+la base de datos y el segundo las imágenes de productos y avatares.
 
 ---
 

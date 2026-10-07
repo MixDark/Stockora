@@ -6,14 +6,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ─── Seguridad ───────────────────────────────────────────────────────────────
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
+    host.strip()
+    for host in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+    if host.strip()
 ]
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:7000',
-    'http://127.0.0.1:7000',
+    origin.strip()
+    for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',')
+    if origin.strip()
 ]
 
 # ─── Apps instaladas ─────────────────────────────────────────────────────────
@@ -190,4 +192,3 @@ else:
     CSRF_COOKIE_HTTPONLY = True
     CSRF_COOKIE_SAMESITE = 'Lax'
     SECURE_CONTENT_TYPE_NOSNIFF = True
-

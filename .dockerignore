@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+.env.*
+venv
+node_modules
+__pycache__
+*.py[cod]
+staticfiles
+media
+.vscode
+.kilo
