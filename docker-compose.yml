@@ -109,11 +109,13 @@ services:
           cpus: "0.2"
           memory: 256M
 
-    healthcheck:
+      healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "python -c \"import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['APP_PORT'] + '/accounts/login/', timeout=5)\""
+          "CMD",
+          "python",
+          "-c",
+          "import socket, os; s=socket.create_connection(('127.0.0.1', int(os.environ['APP_PORT'])), timeout=5); s.close()"
         ]
       interval: 30s
       timeout: 10s
